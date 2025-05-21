@@ -1,62 +1,52 @@
-
-import { Button, Dropdown } from "flowbite-react";
-import { Icon } from "@iconify/react";
+import { Button, Dropdown } from "antd";
+import { UserOutlined, LogoutOutlined } from "@ant-design/icons";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../../../redux/slices/auth.slice";
 import user1 from "/src/assets/images/profile/user-1.jpg";
-import { Link } from "react-router";
+import { RootState } from "../../../redux/store"; 
 
+const ProfileForm = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const user = useSelector((state: RootState) => state.auth.user);
 
-const Profile = () => {
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/account/login"); 
+  };
 
   return (
     <div className="relative group/menu">
       <Dropdown
-        label=""
-        className="rounded-sm w-44"
-        dismissOnClick={false}
-        renderTrigger={() => (
-          <span className="h-10 w-10 hover:text-primary hover:bg-lightprimary rounded-full flex justify-center items-center cursor-pointer group-hover/menu:bg-lightprimary group-hover/menu:text-primary">
-            <img
-              src={user1}
-              alt="logo"
-              height="35"
-              width="35"
-              className="rounded-full"
-            />
-          </span>
-        )}
+        menu={{
+          items: [
+            {
+              key: "profile",
+              label: (
+                <Link to="/account/profile">
+                  <UserOutlined /> Hồ sơ của tôi
+                </Link>
+              ),
+            },
+            {
+              key: "logout",
+              label: (
+                <Button type="text" danger onClick={handleLogout} icon={<LogoutOutlined />}>
+                  Đăng xuất
+                </Button>
+              ),
+            },
+          ],
+        }}
       >
-
-        <Dropdown.Item
-          as={Link}
-          to="#"
-          className="px-3 py-3 flex items-center bg-hover group/link w-full gap-3 text-dark"
-        >
-          <Icon icon="solar:user-circle-outline" height={20} />
-          My Profile
-        </Dropdown.Item>
-        <Dropdown.Item
-          as={Link}
-          to="#"
-          className="px-3 py-3 flex items-center bg-hover group/link w-full gap-3 text-dark"
-        >
-          <Icon icon="solar:letter-linear" height={20} />
-          My Account
-        </Dropdown.Item>
-        <Dropdown.Item
-          as={Link}
-          to="#"
-          className="px-3 py-3 flex items-center bg-hover group/link w-full gap-3 text-dark"
-        >
-          <Icon icon="solar:checklist-linear" height={20} />
-          My Task
-        </Dropdown.Item>
-        <div className="p-3 pt-0">
-        <Button as={Link}  size={'sm'}  to="/account/login" className="mt-2 border border-primary text-primary bg-transparent hover:bg-lightprimary outline-none focus:outline-none">Logout</Button>
-        </div>
+        <span className="cursor-pointer flex items-center gap-2">
+          <img src={user?.avatar || user1} alt="Avatar" className="rounded-full w-10 h-10" />
+          <span>Xin chào, {user?.name || "Người dùng"}</span>
+        </span>
       </Dropdown>
     </div>
   );
 };
 
-export default Profile;
-
+export default ProfileForm;

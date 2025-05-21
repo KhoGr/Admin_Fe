@@ -26,10 +26,22 @@ const SidebarContent: MenuItem[] = [
     heading: "HOME",
     children: [
       {
-        name: "Dashboard",
+        name: "DashBoard",
         icon: "solar:widget-add-line-duotone",
         id: uniqueId(),
         url: "/",
+      },
+      {
+        name: "Category",
+        icon: "solar:widget-add-line-duotone",
+        id: uniqueId(),
+        url: "/account/category",
+      },
+      {
+        name: "Menu Item",
+        icon: "solar:widget-add-line-duotone",
+        id: uniqueId(),
+        url: "/account/menu-item",
       },
     ],
   },

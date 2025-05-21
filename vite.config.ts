@@ -31,7 +31,12 @@ export default defineConfig({
       ],
     },
   },
-
   plugins: [svgr(), react()],
+
+  // ✅ Thêm cấu hình server ở đây
+  server: {
+    port: 5173, // 👈 đổi thành cổng bạn muốn
+  },
+
   base: '/',
 });

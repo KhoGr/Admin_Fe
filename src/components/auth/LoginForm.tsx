@@ -1,5 +1,8 @@
-import { Form, Input, Button, Alert } from "antd";
-import { postLoginRequest } from "../../types/User";
+import { Form, Input, Button, Alert, Typography, Card } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { postLoginRequest } from '../../types/User';
+
+const { Title } = Typography;
 
 interface LoginFormProps {
   onSubmit: (data: postLoginRequest) => void;
@@ -8,7 +11,11 @@ interface LoginFormProps {
   onForgotPasswordClick: () => void;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading, error, onForgotPasswordClick }) => {
+const LoginForm: React.FC<LoginFormProps> = ({
+  onSubmit,
+  loading,
+  error,
+}) => {
   const [form] = Form.useForm();
 
   const handleFinish = (values: postLoginRequest) => {
@@ -17,42 +24,56 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading, error, onForgo
   };
 
   return (
-    <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold text-center text-gray-700"></h2>
+    <Card
+      title={
+        <Title level={3} className="text-center mb-0 text-black dark:text-white">
+          Đăng nhập Quản trị
+        </Title>
+      }
+      className="w-full max-w-md mx-auto"
+      bordered={false}
+      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: 12 }}
+    >
+      {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
 
-      {error && <Alert message={error} type="error" className="mb-4" showIcon />}
-
-      <Form form={form} layout="vertical" onFinish={handleFinish}>
+      <Form form={form} layout="vertical" onFinish={handleFinish} autoComplete="off">
         <Form.Item
           label="Email"
           name="email"
           rules={[
-            { required: true, message: "Vui lòng nhập email" },
-            { type: "email", message: "Email không hợp lệ" },
+            { required: true, message: 'Vui lòng nhập email' },
+            { type: 'email', message: 'Email không hợp lệ' },
           ]}
         >
-          <Input placeholder="abc@gmail.com" autoComplete="email" />
+          <Input
+            placeholder="admin@example.com"
+            autoComplete="email"
+            prefix={<UserOutlined />}
+          />
         </Form.Item>
 
         <Form.Item
           label="Mật khẩu"
           name="password"
-          rules={[{ required: true, message: "Vui lòng nhập mật khẩu" }]}
+          rules={[
+            { required: true, message: 'Vui lòng nhập mật khẩu' },
+            { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
+          ]}
         >
-          <Input.Password placeholder="••••••••" autoComplete="current-password" />
+          <Input.Password
+            placeholder="••••••••"
+            autoComplete="current-password"
+            prefix={<LockOutlined />}
+          />
         </Form.Item>
 
-        <div className="text-right mb-2">
-          <Button type="link" onClick={onForgotPasswordClick}>
-            Quên mật khẩu?
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block loading={loading} disabled={loading}>
+            Đăng nhập
           </Button>
-        </div>
-
-        <Button type="primary" disabled={loading} htmlType="submit" block loading={loading}>
-          Đăng nhập
-        </Button>
+        </Form.Item>
       </Form>
-    </div>
+    </Card>
   );
 };
 

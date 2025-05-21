@@ -76,6 +76,24 @@ export const loginUser = createAsyncThunk(
 );
 
 
+
+export const loginAdmin = createAsyncThunk(
+  'auth/loginAdmin',
+  async (loginData: postLoginRequest, { rejectWithValue }) => {
+    try {
+      const response = await userApi.adminLogin(loginData); // <-- gọi API riêng
+      const { token, expires } = response.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("tokenExpires", expires);
+      return { token, expires };
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      return rejectWithValue(
+        axiosError.response?.data?.message || 'Đăng nhập admin thất bại'
+      );
+    }
+  }
+);
 export const getMe = createAsyncThunk(
   'auth/getMe',
   async (_, { rejectWithValue }) => {
@@ -94,6 +112,7 @@ export const getMe = createAsyncThunk(
     }
   }
 );
+
 
 /////////////////////////////////////////////////////
 const authSlice = createSlice({

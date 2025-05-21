@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import {   Navbar } from "flowbite-react";
 import { Icon } from "@iconify/react";
-import ProfileForm from "./Profile1";
+import ProfileForm from "./Profile";
 import Notification from "./notification";
 import { Drawer } from "flowbite-react";
 import MobileSidebar from "../sidebar/MobileSidebar";
+import ThemeToggleButton from "../../../shared/components/ThemeToggleButton"; // 👈 Thêm dòng này
+
 
 
 const Header = () => {
@@ -31,12 +33,8 @@ const Header = () => {
   const handleClose = () => setIsOpen(false);
   return (
     <>
-      <header
-        className={`sticky top-0 z-[5] ${isSticky
-            ? "bg-white dark:bg-dark fixed w-full"
-            : "bg-white"
-          }`}
-      >
+<header className={`sticky top-0 z-[5] ${isSticky ? "fixed w-full" : ""} bg-white dark:bg-dark`}>
+
         <Navbar
           fluid
           className={`rounded-none bg-transparent dark:bg-transparent py-4 sm:px-30 px-4`}
@@ -55,6 +53,8 @@ const Header = () => {
             </div>
 
             <div className="flex gap-4 items-center">
+              <ThemeToggleButton/>
+              
 
               <ProfileForm />
             </div>

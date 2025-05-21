@@ -136,3 +136,12 @@ export interface getMeResponse {
   };
 }
 
+export interface adminLoginRequest {
+  email: string;
+  password: string;
+}
+export interface adminLoginResponse {
+  message: string;
+  token: string;
+  expires: string;
+}

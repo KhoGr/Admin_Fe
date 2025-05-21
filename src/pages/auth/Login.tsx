@@ -2,39 +2,53 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../redux/store";
 import { postLoginRequest } from "../../types/User";
-import { loginUser } from "../../redux/slices/auth.slice";
+import { loginAdmin, getMe, logout } from "../../redux/slices/auth.slice";
 import { useNavigate } from "react-router-dom";
+import { setMessage } from "../../redux/slices/message.slice"; // ✅ import
 import LoginForm from "../../components/auth/LoginForm";
-import { Alert } from "antd";
 
 const Login = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { token, error, loading } = useSelector((state: RootState) => state.auth);
+  const { token, user, error, loading } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    if (token) {
-      navigate("/"); // Nếu đã đăng nhập, chuyển hướng về trang chủ ngay
+    if (user) {
+      if (user.role === "admin") {
+        dispatch(setMessage({ type: "success", message: "Đăng nhập thành công!" })); // ✅ success message
+        navigate("/dashboard");
+      } else {
+        dispatch(logout());
+        dispatch(setMessage({ type: "error", message: "Chỉ tài khoản admin mới được phép truy cập!" })); // ✅ role error
+      }
     }
-  }, [token, navigate]);
+  }, [user, dispatch, navigate]);
 
-  const handleLogin = (data: postLoginRequest) => {
-    dispatch(loginUser(data));
+  const handleLogin = async (data: postLoginRequest) => {
+    try {
+      const resultAction = await dispatch(loginAdmin(data)).unwrap();
+
+      if (resultAction?.token) {
+        await dispatch(getMe()).unwrap();
+      }
+    } catch (err) {
+      dispatch(setMessage({ type: "error", message: "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu." })); // ✅ login error
+      console.error("Đăng nhập thất bại:", err);
+    }
   };
 
   const handleForgotPassword = () => {
-    navigate("/forgot-password"); // Điều hướng đến trang quên mật khẩu
+    navigate("/forgot-password");
   };
 
   return (
-    <div className="flex items-center justify-center h-screen w-screen bg-gray-100">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-center text-gray-700 mb-4">Đăng nhập</h2>
-
-        {error && <Alert message={error} type="error" className="mb-4" showIcon />}
-
-        <LoginForm onSubmit={handleLogin} loading={loading} error={error} onForgotPasswordClick={handleForgotPassword} />
-      </div>
+    <div className="flex items-center justify-center h-screen w-screen bg-gradient-to-br from-blue-100 to-purple-200">
+      <LoginForm
+        onSubmit={handleLogin}
+        loading={loading}
+        error={error}
+        onForgotPasswordClick={handleForgotPassword}
+      />
     </div>
   );
 };
