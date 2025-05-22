@@ -10,7 +10,7 @@ import LoginForm from "../../components/auth/LoginForm";
 const Login = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { token, user, error, loading } = useSelector((state: RootState) => state.auth);
+  const {  user, error, loading } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     if (user) {
