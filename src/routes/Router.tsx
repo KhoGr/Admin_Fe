@@ -15,6 +15,7 @@ const EditProfile =Loadable(lazy(()=>import("../pages/profile/EditProfile")));
 const ProductDetail=Loadable(lazy(()=>import("../components/product/ProductDetail")));
 const CategoryPage=Loadable(lazy(()=>import("../pages/category/Category")))
 const MenuItemPage=Loadable(lazy(()=>import("../pages/menuItem/menuItem")))
+const CustomerPage=Loadable(lazy(()=>import("../pages/customer/CustomerPage")))
 
 
 
@@ -29,7 +30,8 @@ const Router = createBrowserRouter([
       {path:"/account/edit-profile",element:<EditProfile/>},
       {path:"/account/product-detail",element:<ProductDetail/>},
       {path:"/account/category",element:<CategoryPage/>},
-      {path:"/admin/menu-item",element:<MenuItemPage/>}
+      {path:"/admin/menu-item",element:<MenuItemPage/>},
+      {path:"/admin/customer",element:<CustomerPage/>}
 
     ],
   },
