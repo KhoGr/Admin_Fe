@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  TextField,
-  Container,
-  Typography,
-  Box,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  useTheme
-} from '@mui/material';
+import { Input, Button, Modal, Form, Typography, Space } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { RootState, AppDispatch } from '../../redux/store';
@@ -21,7 +10,6 @@ import {
   updateCategory,
   searchCategories
 } from '../../redux/slices/categories.slice';
-import { Modal, Input, Form } from 'antd';
 import { Category } from '../../types/category';
 
 interface FormData {
@@ -31,7 +19,6 @@ interface FormData {
 
 const CategoryPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const theme = useTheme();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
@@ -78,30 +65,43 @@ const CategoryPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ color: theme.palette.text.primary }}>
-        Danh sách danh mục
-      </Typography>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
+      <Typography.Title level={4}>Danh sách danh mục</Typography.Title>
 
-      <Box display="flex" gap={2} mb={2}>
-        <TextField
-          label="Tìm kiếm danh mục..."
-          variant="outlined"
-          fullWidth
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{
-            input: { color: theme.palette.text.primary },
-            label: { color: theme.palette.text.secondary }
-          }}
-        />
-        <Button variant="outlined" onClick={onSearch}>
-          Tìm kiếm
-        </Button>
-        <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
-          Thêm danh mục
-        </Button>
-      </Box>
+<div style={{ 
+  display: 'flex', 
+  justifyContent: 'space-between', 
+  alignItems: 'center', // Thêm dòng này để căn giữa theo chiều dọc
+  marginBottom: 24,
+  gap: 8 // Tạo khoảng cách giữa các phần tử
+}}>
+  <Space direction="horizontal" align="center"> {/* Thêm align="center" */}
+    <Input
+      placeholder="Tìm kiếm danh mục..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      style={{ 
+        width: 500, // Thay minWidth bằng width cố định
+        height: 32 // Thêm chiều cao cố định
+      }}
+    />
+    <Button 
+      type="default" 
+      onClick={onSearch}
+      style={{ height: 32 }} // Đồng bộ chiều cao với Input
+    >
+      Tìm kiếm
+    </Button>
+  </Space>
+
+  <Button 
+    type="primary" 
+    onClick={() => setOpen(true)}
+    style={{ height: 32 }} // Đồng bộ chiều cao
+  >
+    + Thêm danh mục
+  </Button>
+</div>
 
       <CategoryTable
         categories={categories}
@@ -109,47 +109,39 @@ const CategoryPage: React.FC = () => {
       />
 
       {/* Modal thêm danh mục */}
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ backgroundColor: theme.palette.background.default, color: theme.palette.text.primary }}>
-          Thêm danh mục mới
-        </DialogTitle>
-        <DialogContent sx={{ backgroundColor: theme.palette.background.default }}>
-          <Box
-            component="form"
-            onSubmit={handleSubmit(onSubmit)}
-            display="flex"
-            flexDirection="column"
-            gap={2}
-            mt={1}
-          >
-            <TextField
-              label="Tên danh mục"
-              fullWidth
+      <Modal
+        title="Thêm danh mục mới"
+        open={open}
+        onCancel={() => setOpen(false)}
+        footer={null}
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Input
+              placeholder="Tên danh mục"
               {...register('name', { required: true })}
-              InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-              InputProps={{ style: { color: theme.palette.text.primary } }}
             />
-            <TextField
-              label="Mô tả"
-              fullWidth
-              multiline
+            <Input.TextArea
+              placeholder="Mô tả"
               rows={3}
               {...register('description')}
-              InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-              InputProps={{ style: { color: theme.palette.text.primary } }}
             />
-            <DialogActions>
-              <Button onClick={() => setOpen(false)} color="inherit">Hủy</Button>
-              <Button type="submit" variant="contained">Lưu</Button>
-            </DialogActions>
-          </Box>
-        </DialogContent>
-      </Dialog>
+            <div style={{ textAlign: 'right' }}>
+              <Button onClick={() => setOpen(false)} style={{ marginRight: 8 }}>
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit">
+                Lưu
+              </Button>
+            </div>
+          </Space>
+        </form>
+      </Modal>
 
-      {/* Modal xem chi tiết/sửa */}
+      {/* Modal chi tiết danh mục */}
       <Modal
-        open={detailOpen}
         title="Chi tiết danh mục"
+        open={detailOpen}
         onCancel={() => setDetailOpen(false)}
         onOk={handleUpdate}
         okText="Lưu"
@@ -164,7 +156,7 @@ const CategoryPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Container>
+    </div>
   );
 };
 

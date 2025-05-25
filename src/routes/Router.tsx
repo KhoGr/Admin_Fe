@@ -16,6 +16,12 @@ const ProductDetail=Loadable(lazy(()=>import("../components/product/ProductDetai
 const CategoryPage=Loadable(lazy(()=>import("../pages/category/Category")))
 const MenuItemPage=Loadable(lazy(()=>import("../pages/menuItem/menuItem")))
 const CustomerPage=Loadable(lazy(()=>import("../pages/customer/CustomerPage")))
+const StaffPage=Loadable(lazy(()=>import("../pages/staff/StaffPage")))
+const OrderPage=Loadable(lazy(()=>import("../pages/order/OrderPage")))
+const CommentsPage=Loadable(lazy(()=>import("../pages/comment/CommentPage")))
+const MonthlyRevenue=Loadable(lazy(()=>import("../pages/monthly/MonthlyRevenue")))
+const Inventory=Loadable(lazy(()=>import("../pages/inventory/inventoryPage")))
+const SettingsPage=Loadable(lazy(()=>import("../pages/setting/Settings")))
 
 
 
@@ -31,7 +37,13 @@ const Router = createBrowserRouter([
       {path:"/account/product-detail",element:<ProductDetail/>},
       {path:"/account/category",element:<CategoryPage/>},
       {path:"/admin/menu-item",element:<MenuItemPage/>},
-      {path:"/admin/customer",element:<CustomerPage/>}
+      {path:"/admin/customer",element:<CustomerPage/>},
+      {path:"/admin/staff",element:<StaffPage/>},
+      {path:"/admin/order",element:<OrderPage/>},
+      {path:"/admin/comment",element:<CommentsPage/>},
+      {path:"/admin/monthly-revenue",element:<MonthlyRevenue/>},
+      {path:"/admin/inventory",element:<Inventory/>},
+      {path:"/admin/settings",element:<SettingsPage/>}
 
     ],
   },
