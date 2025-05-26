@@ -22,6 +22,7 @@ const CommentsPage=Loadable(lazy(()=>import("../pages/comment/CommentPage")))
 const MonthlyRevenue=Loadable(lazy(()=>import("../pages/monthly/MonthlyRevenue")))
 const Inventory=Loadable(lazy(()=>import("../pages/inventory/inventoryPage")))
 const SettingsPage=Loadable(lazy(()=>import("../pages/setting/Settings")))
+const WorkSchedulePage=Loadable(lazy(()=>import("../pages/workSchedule/WorkSchedule")))
 
 
 
@@ -43,7 +44,8 @@ const Router = createBrowserRouter([
       {path:"/admin/comment",element:<CommentsPage/>},
       {path:"/admin/monthly-revenue",element:<MonthlyRevenue/>},
       {path:"/admin/inventory",element:<Inventory/>},
-      {path:"/admin/settings",element:<SettingsPage/>}
+      {path:"/admin/settings",element:<SettingsPage/>},
+      {path:"/admin/work-schedule",element:<WorkSchedulePage/>}
 
     ],
   },
