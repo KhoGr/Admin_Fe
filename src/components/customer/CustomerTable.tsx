@@ -1,23 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Typography,
-  useTheme,
-  TablePagination,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import InfoIcon from '@mui/icons-material/Info';
+import { Table, Typography, Space, Button, Popconfirm } from 'antd';
+import { InfoCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { CustomerModel } from '../../types/Customer';
 import customerApi from '../../api/customerApi';
-import { useDispatch, useSelector } from 'react-redux';
 import { setMessage } from '../../redux/slices/message.slice';
 import { RootState } from '../../redux/store';
 
@@ -28,22 +15,13 @@ interface CustomerTableProps {
 }
 
 const CustomerTable: React.FC<CustomerTableProps> = ({ customers, onDetail, onReload }) => {
-  const theme = useTheme();
   const dispatch = useDispatch();
-
   const user = useSelector((state: RootState) => state.auth.user);
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 5,
+  });
 
   const handleDelete = async (userId: number) => {
     try {
@@ -55,80 +33,88 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ customers, onDetail, onRe
     }
   };
 
-  const handleDetail = (customer: CustomerModel) => {
-    onDetail(customer);
+  const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      render: (_: any, __: CustomerModel, index: number) =>
+        (pagination.current - 1) * pagination.pageSize + index + 1,
+    },
+    {
+      title: 'Họ tên',
+      dataIndex: ['user_info', 'name'],
+      key: 'name',
+    },
+    {
+      title: 'Email',
+      dataIndex: ['user_info', 'account', 'email'],
+      key: 'email',
+    },
+    {
+      title: 'Điểm tích lũy',
+      dataIndex: 'loyalty_point',
+      key: 'loyalty_point',
+    },
+    {
+      title: 'Tổng chi tiêu',
+      dataIndex: 'total_spent',
+      key: 'total_spent',
+      render: (value: number) =>
+        Math.min(value, 9999999999).toLocaleString('vi-VN', {
+          style: 'currency',
+          currency: 'VND',
+        }),
+    },
+    {
+      title: 'Hạng',
+      dataIndex: 'membership_level',
+      key: 'membership_level',
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      key: 'note',
+      render: (note: string | null) => note || '—',
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      align: 'center' as const,
+      render: (_: any, record: CustomerModel) => (
+        <Space>
+          <Button icon={<InfoCircleOutlined />} onClick={() => onDetail(record)} />
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xoá?"
+            onConfirm={() => handleDelete(record.user_id)}
+            okText="Xoá"
+            cancelText="Hủy"
+          >
+            <Button icon={<DeleteOutlined />} danger />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const handleTableChange = (pagination: any) => {
+    setPagination(pagination);
   };
-
-  const paginatedItems = customers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-  if (!customers || customers.length === 0) {
-    return (
-      <Typography align="center" mt={4}>
-        Không có khách hàng nào.
-      </Typography>
-    );
-  }
 
   return (
     <>
       {user && (
-        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+        <Typography.Text style={{ display: 'block', marginBottom: 16 }}>
           Xin chào, {user.name} ({user.email})
-        </Typography>
+        </Typography.Text>
       )}
 
-      <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.background.paper }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>STT</TableCell>
-              <TableCell>Họ tên</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Điểm tích lũy</TableCell>
-              <TableCell>Tổng chi tiêu</TableCell>
-              <TableCell>Hạng</TableCell>
-              <TableCell>Ghi chú</TableCell>
-              <TableCell align="center">Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedItems.map((item, index) => (
-              <TableRow key={item.customer_id}>
-                <TableCell>{page * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{item.user?.name || '—'}</TableCell>
-                <TableCell>{item.user?.account?.email || '—'}</TableCell>
-                <TableCell>{item.loyalty_point}</TableCell>
-                <TableCell>
-                  {Math.min(Number(item.total_spent), 9999999999).toLocaleString('vi-VN', {
-                    style: 'currency',
-                    currency: 'VND',
-                  })}
-                </TableCell>
-                <TableCell>{item.membership_level}</TableCell>
-                <TableCell>{item.note || '—'}</TableCell>
-                <TableCell align="center">
-                  <IconButton color="primary" onClick={() => handleDetail(item)}>
-                    <InfoIcon />
-                  </IconButton>
-                  <IconButton color="error" onClick={() => handleDelete(item.user_id)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <TablePagination
-        component="div"
-        count={customers.length}
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Số dòng mỗi trang"
-        labelDisplayedRows={({ from, to, count }) => `${from}–${to} trong ${count}`}
+      <Table
+        columns={columns}
+        dataSource={customers}
+        rowKey={(record) => record.customer_id}
+        pagination={pagination}
+        onChange={handleTableChange}
+        locale={{ emptyText: 'Không có khách hàng nào.' }}
       />
     </>
   );

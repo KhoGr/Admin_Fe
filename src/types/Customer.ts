@@ -10,7 +10,7 @@ export interface CustomerModel {
   created_at: string; // ISO date string
   updated_at: string;
 
-  user?: {
+  user_info?: {
     user_id: number;
     name: string;
     username: string;

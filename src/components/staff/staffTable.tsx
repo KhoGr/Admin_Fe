@@ -1,25 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Typography,
-  useTheme,
-  Box,
-  Button,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import InfoIcon from '@mui/icons-material/Info';
-
-import { StaffModel } from '../../types/staff';
-import staffApi from '../../api/staffApi';
+import { Table, Typography, Button, Space, Popconfirm, message } from 'antd';
+import { InfoCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
+import { StaffModel } from '../../types/staff';
+import staffApi from '../../api/staffApi';
 
 interface StaffTableProps {
   staffList: StaffModel[];
@@ -28,119 +13,125 @@ interface StaffTableProps {
 }
 
 const StaffTable: React.FC<StaffTableProps> = ({ staffList = [], onDetail, onReload }) => {
-  const theme = useTheme();
   const user = useSelector((state: RootState) => state.auth.user);
-
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const rowsPerPage = 5;
-
-  const maxPage = Math.ceil(staffList.length / rowsPerPage);
 
   const handleDelete = async (userId: number) => {
     try {
       await staffApi.delete(userId);
-      alert('Xóa nhân viên thành công');
+      message.success('Xóa nhân viên thành công');
       onReload?.();
     } catch (error) {
-      alert('Xóa nhân viên thất bại');
+      message.error('Xóa nhân viên thất bại');
     }
   };
 
-  const handleDetail = (staff: StaffModel) => {
-    onDetail(staff);
-  };
+  const columns = [
+    {
+      title: 'STT',
+      dataIndex: 'index',
+      render: (_: any, __: StaffModel, index: number) => (page - 1) * rowsPerPage + index + 1,
+    },
+    {
+      title: 'Họ tên',
+      dataIndex: ['user', 'name'],
+      render: (text: string) => text || '—',
+    },
+    {
+      title: 'Email',
+      dataIndex: ['user', 'account', 'email'],
+      render: (text: string) => text || '—',
+    },
+    {
+      title: 'Chức vụ',
+      dataIndex: 'position',
+      render: (text: string) => text || '—',
+    },
+    {
+      title: 'Lương',
+      dataIndex: 'salary',
+      render: (salary: number) =>
+        salary
+          ? salary.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
+          : '—',
+    },
+    {
+      title: 'Loại làm việc',
+      dataIndex: 'working_type',
+      render: (text: string) => text || '—',
+    },
+    {
+      title: 'Ngày vào làm',
+      dataIndex: 'joined_date',
+      render: (date: string) =>
+        date ? new Date(date).toLocaleDateString('vi-VN') : '—',
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      render: (text: string) => text || '—',
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      align: 'center' as const,
+      render: (_: any, staff: StaffModel) => (
+        <Space>
+          <Button
+            type="link"
+            icon={<InfoCircleOutlined />}
+            onClick={() => onDetail(staff)}
+          />
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xóa?"
+            onConfirm={() => handleDelete(staff.user_id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button type="link" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
-  const paginatedItems = staffList.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-  console.log('staffList:', staffList);
-
-  if (!Array.isArray(staffList) || staffList.length === 0) {
-    return (
-      <Typography align="center" mt={4}>
-        Không có nhân viên nào.
-      </Typography>
-    );
-  }
+  const paginatedData = staffList.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage
+  );
 
   return (
     <>
       {user && (
-        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+        <Typography.Text strong>
           Xin chào, {user.name} ({user.email})
-        </Typography>
+        </Typography.Text>
       )}
 
-      <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.background.paper }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>STT</TableCell>
-              <TableCell>Họ tên</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Chức vụ</TableCell>
-              <TableCell>Lương</TableCell>
-              <TableCell>Loại làm việc</TableCell>
-              <TableCell>Ngày vào làm</TableCell>
-              <TableCell>Ghi chú</TableCell>
-              <TableCell align="center">Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedItems.map((staff, index) => (
-              <TableRow key={staff.staff_id}>
-                <TableCell>{page * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{staff.user?.name || '—'}</TableCell>
-                <TableCell>{staff.user?.account?.email || '—'}</TableCell>
-                <TableCell>{staff.position || '—'}</TableCell>
-                <TableCell>
-                  {staff.salary
-                    ? Number(staff.salary).toLocaleString('vi-VN', {
-                        style: 'currency',
-                        currency: 'VND',
-                      })
-                    : '—'}
-                </TableCell>
-                <TableCell>{staff.working_type || '—'}</TableCell>
-                <TableCell>
-                  {staff.joined_date
-                    ? new Date(staff.joined_date).toLocaleDateString('vi-VN')
-                    : '—'}
-                </TableCell>
-                <TableCell>{staff.note || '—'}</TableCell>
-                <TableCell align="center">
-                  <IconButton color="primary" onClick={() => handleDetail(staff)}>
-                    <InfoIcon />
-                  </IconButton>
-                  <IconButton color="error" onClick={() => handleDelete(staff.user_id)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Table
+        columns={columns}
+        dataSource={paginatedData}
+        rowKey="staff_id"
+        pagination={false}
+        style={{ marginTop: 16 }}
+      />
 
       {/* Custom Pagination */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
-        <Button
-          variant="contained"
-          disabled={page === 0}
-          onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-        >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
           Trang trước
         </Button>
         <Typography>
-          Trang {page + 1} / {maxPage}
+          Trang {page} / {Math.ceil(staffList.length / rowsPerPage) || 1}
         </Typography>
         <Button
-          variant="contained"
-          disabled={page >= maxPage - 1}
-          onClick={() => setPage((prev) => Math.min(prev + 1, maxPage - 1))}
+          disabled={page >= Math.ceil(staffList.length / rowsPerPage)}
+          onClick={() => setPage(page + 1)}
         >
           Trang sau
         </Button>
-      </Box>
+      </div>
     </>
   );
 };

@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Box, TextField, Button, useTheme } from '@mui/material';
-import { Modal, Form, Input, Select } from 'antd';
+import { Typography, Input, Button, Modal, Form, Select, Space, Row, Col } from 'antd';
 import CustomerTable from '../../components/customer/CustomerTable';
 import { CustomerModel } from '../../types/Customer';
 import customerApi from '../../api/customerApi';
 import { useDispatch } from 'react-redux';
 import { setMessage } from '../../redux/slices/message.slice';
 
-
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const CustomerPage: React.FC = () => {
-
   const dispatch = useDispatch();
-  const theme = useTheme();
   const [form] = Form.useForm();
 
   const [customers, setCustomers] = useState<CustomerModel[]>([]);
@@ -24,6 +21,8 @@ const CustomerPage: React.FC = () => {
   const fetchAllCustomers = async () => {
     try {
       const data = await customerApi.getAll();
+            console.log("data ",data)
+
       setCustomers(data.data);
     } catch (error) {
       dispatch(setMessage({ message: 'Không thể tải danh sách khách hàng', type: 'error' }));
@@ -37,8 +36,6 @@ const CustomerPage: React.FC = () => {
         return;
       }
       const data = await customerApi.searchByName(searchTerm);
-      console.log("🔍 Search result:", data);
-
       setCustomers(data);
     } catch (error) {
       dispatch(setMessage({ message: 'Không tìm thấy khách hàng', type: 'error' }));
@@ -53,9 +50,9 @@ const CustomerPage: React.FC = () => {
     setSelectedCustomer(customer);
 
     form.setFieldsValue({
-      name: customer.user?.name || '',
-      username: customer.user?.username || '',
-      email: customer.user?.account?.email || '',
+      name: customer.user_info?.name || '',
+      username: customer.user_info?.username || '',
+      email: customer.user_info?.account?.email || '',
       loyalty_point: customer.loyalty_point,
       total_spent: customer.total_spent,
       membership_level: customer.membership_level,
@@ -70,28 +67,31 @@ const CustomerPage: React.FC = () => {
   }, []);
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ color: theme.palette.text.primary }}>
-        Danh sách khách hàng
-      </Typography>
+    <div style={{ padding: 24 }}>
+      <Title level={3}>Danh sách khách hàng</Title>
 
-      <Box display="flex" gap={2} mb={2}>
-        <TextField
-          label="Tìm kiếm theo tên"
-          fullWidth
-          variant="outlined"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <Button variant="outlined" onClick={handleSearch}>
-          Tìm kiếm
-        </Button>
-        <Button variant="contained" color="primary" onClick={handleReload}>
-          Tải lại
-        </Button>
-      </Box>
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Row gutter={16}>
+          <Col flex="auto">
+            <Input
+              placeholder="Tìm kiếm theo tên"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col>
+            <Button onClick={handleSearch}>Tìm kiếm</Button>
+          </Col>
+          <Col>
+            <Button type="primary" onClick={handleReload}>
+              Tải lại
+            </Button>
+          </Col>
+        </Row>
 
-      <CustomerTable customers={customers} onDetail={handleDetail} onReload={handleReload} />
+        <CustomerTable customers={customers} onDetail={handleDetail} onReload={handleReload} />
+      </Space>
 
       <Modal
         open={openDetail}
@@ -101,16 +101,16 @@ const CustomerPage: React.FC = () => {
         onOk={async () => {
           try {
             const values = await form.validateFields();
-            if (!selectedCustomer?.user?.user_id) {
+            if (!selectedCustomer?.user_info?.user_id) {
               dispatch(setMessage({ message: 'Không có ID người dùng!', type: 'error' }));
               return;
             }
 
-            await customerApi.update(selectedCustomer.user.user_id, values);
+            await customerApi.update(selectedCustomer.user_info.user_id, values);
 
             dispatch(setMessage({ message: 'Cập nhật khách hàng thành công!', type: 'success' }));
             setOpenDetail(false);
-            fetchAllCustomers(); // Reload lại danh sách
+            fetchAllCustomers();
           } catch (error) {
             dispatch(setMessage({ message: 'Lỗi khi cập nhật khách hàng', type: 'error' }));
             console.error('Update error:', error);
@@ -134,14 +134,13 @@ const CustomerPage: React.FC = () => {
             <Input type="number" addonAfter="₫" />
           </Form.Item>
           {form.getFieldValue('total_spent') !== undefined && (
-            <Typography variant="body2" sx={{ color: 'gray' }}>
+            <Text type="secondary">
               {Number(form.getFieldValue('total_spent')).toLocaleString('vi-VN', {
                 style: 'currency',
                 currency: 'VND',
               })}
-            </Typography>
+            </Text>
           )}
-
           <Form.Item label="Hạng" name="membership_level">
             <Select>
               <Option value="bronze">Bronze</Option>
@@ -155,7 +154,7 @@ const CustomerPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Container>
+    </div>
   );
 };
 

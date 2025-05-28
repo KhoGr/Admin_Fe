@@ -20,7 +20,6 @@ export interface MenuItem {
 }
 
 import { uniqueId } from "lodash";
-
 const SidebarContent: MenuItem[] = [
   {
     heading: "TRANG CHỦ",
@@ -52,19 +51,19 @@ const SidebarContent: MenuItem[] = [
         name: "Đơn hàng",
         icon: "solar:bill-list-outline",
         id: uniqueId(),
-        url: "/account/orders",
+        url: "/admin/order",
       },
       {
-        name: "Khuyến mãi",
-        icon: "solar:tag-price-outline",
+        name: "Bình luận",
+        icon: "solar:chat-round-line-outline",
         id: uniqueId(),
-        url: "/account/promotions",
+        url: "/admin/comment",
       },
       {
-        name: "Bàn ăn",
-        icon: "solar:chair-outline",
+        name: "Kho hàng",
+        icon: "solar:box-outline",
         id: uniqueId(),
-        url: "/account/tables",
+        url: "/admin/inventory",
       },
     ],
   },
@@ -75,19 +74,19 @@ const SidebarContent: MenuItem[] = [
         name: "Nhân viên",
         icon: "solar:users-group-two-rounded-outline",
         id: uniqueId(),
-        url: "/account/staff",
+        url: "/admin/staff",
       },
       {
         name: "Khách hàng",
-        icon: "solar:users-group-two-rounded-outline",
+        icon: "solar:user-id-outline",
         id: uniqueId(),
-        url: "/account/customers",
+        url: "/admin/customer",
       },
       {
-        name: "Phân ca",
-        icon: "solar:calendar-mark-outline",
+        name: "Lịch làm việc",
+        icon: "solar:calendar-outline",
         id: uniqueId(),
-        url: "/account/shifts",
+        url: "/admin/work-schedule",
       },
     ],
   },
@@ -95,16 +94,10 @@ const SidebarContent: MenuItem[] = [
     heading: "THỐNG KÊ",
     children: [
       {
-        name: "Doanh thu",
-        icon: "solar:chart-outline",
+        name: "Doanh thu hàng tháng",
+        icon: "solar:chart-square-outline",
         id: uniqueId(),
-        url: "/account/revenue",
-      },
-      {
-        name: "Báo cáo",
-        icon: "solar:document-text-outline",
-        id: uniqueId(),
-        url: "/account/reports",
+        url: "/admin/monthly-revenue",
       },
     ],
   },
@@ -115,13 +108,36 @@ const SidebarContent: MenuItem[] = [
         name: "Thông tin nhà hàng",
         icon: "solar:shop-outline",
         id: uniqueId(),
-        url: "/account/restaurant-info",
+        url: "/admin/settings",
       },
       {
-        name: "Tài khoản",
+        name: "Tài khoản của tôi",
         icon: "solar:user-circle-line-duotone",
         id: uniqueId(),
         url: "/account/profile",
+      },
+      {
+        name: "Chỉnh sửa hồ sơ",
+        icon: "solar:pen-new-square-linear",
+        id: uniqueId(),
+        url: "/account/edit-profile",
+      },
+      {
+        name: "Chi tiết sản phẩm",
+        icon: "solar:tag-outline",
+        id: uniqueId(),
+        url: "/account/product-detail",
+      },
+    ],
+  },
+  {
+    heading: "HỖ TRỢ",
+    children: [
+      {
+        name: "Chatbot",
+        icon: "solar:robot-outline",
+        id: uniqueId(),
+        url: "/admin/chatbot",
       },
     ],
   },
@@ -133,12 +149,6 @@ const SidebarContent: MenuItem[] = [
         icon: "solar:login-2-linear",
         id: uniqueId(),
         url: "/account/login",
-      },
-      {
-        name: "Đăng ký",
-        icon: "solar:shield-user-outline",
-        id: uniqueId(),
-        url: "/account/register",
       },
     ],
   },
