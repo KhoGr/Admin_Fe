@@ -1,11 +1,21 @@
 import { useEffect } from 'react';
-import { Button, Form, Input, InputNumber, Space, Typography, Divider } from 'antd';
+import {
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Space,
+  Typography,
+  Divider,
+  message,
+} from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import { Order } from '../../types/order';
+import orderApi from '../../api/orderApi';
+import { OrderModel } from '../../types/Orderlist';
 
 type Props = {
-  initialData?: Order;
-  onSave: (order: Order) => void;
+  initialData?: Partial<OrderModel>;
+  onSave: () => void; // chỉ cần báo đã lưu xong để gọi getAll bên ngoài
   onCancel: () => void;
 };
 
@@ -15,37 +25,46 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
-        customerName: initialData.customerName,
-        tableNumber: initialData.tableNumber,
-        notes: initialData.notes,
-        items: initialData.items,
+        customerName: initialData.customer?.name,
+        tableNumber: initialData.table?.table_id?.toString(),
+        notes: initialData.note,
+        items:
+          initialData.order_items?.map((item) => ({
+            item_id: item.item_id,
+            name: item.menu_item?.name,
+            quantity: item.quantity,
+            price: Number(item.price),
+          })) || [],
       });
     }
   }, [initialData, form]);
 
-  const calculateSubtotal = (quantity: number, price: number) =>
-    quantity && price ? quantity * price : 0;
-
-  const handleFinish = (values: any) => {
-    const items = (values.items || []).map((item: any) => ({
-      ...item,
-      subtotal: calculateSubtotal(item.quantity, item.price),
-      id: item.id || `item_${Date.now()}_${Math.random()}`,
+  const handleFinish = async (values: any) => {
+    const order_items = (values.items || []).map((item: any) => ({
+      item_id: item.item_id || 0, // 👈 bạn nên thay bằng ID thực từ menu
+      quantity: item.quantity,
+      price: item.price,
     }));
 
-    const total = items.reduce((sum: number, item: any) => sum + item.subtotal, 0);
-
-    const newOrder: Order = {
-      ...initialData,
-      ...values,
-      items,
-      total,
-      createdAt: initialData?.createdAt || new Date(),
-      status: initialData?.status || 'pending',
-      id: initialData?.id || `order_${Date.now()}`,
+    const payload = {
+      customer_id: undefined, // 👈 nếu có chọn khách thì set vào đây
+      table_id: values.tableNumber ? parseInt(values.tableNumber) : undefined,
+      order_type: values.tableNumber ? 'dine-in' as const : 'take-away' as const,
+      discount_amount: 0,
+      payment_method: 'cash',
+      note: values.notes,
+      order_items,
     };
 
-    onSave(newOrder);
+    try {
+      await orderApi.create(payload);
+      message.success('Đơn hàng đã được tạo');
+      onSave(); // thông báo đã lưu xong, để cha gọi getAll
+      form.resetFields();
+    } catch (err) {
+      console.error('Tạo đơn hàng thất bại:', err);
+      message.error('Tạo đơn hàng thất bại');
+    }
   };
 
   return (

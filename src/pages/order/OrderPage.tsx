@@ -19,36 +19,7 @@ import OrderForm from '../../components/order/OrderForm';
 import OrderDetails from '../../components/order/OrderDetails';
 import { Order } from '../../types/order';
 import { toast } from 'sonner';
-
-const mockOrders: Order[] = [
-      {
-    id: 'order1',
-    customerName: 'John Doe',
-    items: [
-      {
-        id: 'item1',
-        menuItemId: 'm1',
-        name: 'Grilled Salmon',
-        price: 24.99,
-        quantity: 2,
-        subtotal: 49.98,
-      },
-      {
-        id: 'item2',
-        menuItemId: 'm3',
-        name: 'Caesar Salad',
-        price: 9.99,
-        quantity: 1,
-        subtotal: 9.99,
-      },
-    ],
-    total: 59.97,
-    status: 'delivered',
-    createdAt: new Date('2025-05-09T10:30:00'),
-    tableNumber: '12',
-    notes: 'No onions please',
-  },
-];
+import orderApi from '../../api/orderApi';
 
 const Orders = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -58,19 +29,31 @@ const Orders = () => {
   const [isViewingOnly, setIsViewingOnly] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('orders');
-    if (saved) {
-      setOrders(JSON.parse(saved));
-    } else {
-      setOrders(mockOrders);
-    }
+    orderApi.getAll()
+      .then((orderModels) => {
+        // Map OrderModel[] to Order[] if needed
+        const mappedOrders: Order[] = orderModels.map((o: any) => ({
+          id: o.id,
+          customerName: o.customerName,
+          tableNumber: o.tableNumber,
+          total: o.total,
+          items: o.items,
+          createdAt: o.createdAt,
+          status: o.status,
+        }));
+        setOrders(mappedOrders);
+      })
+      .catch(() => toast.error('Failed to load orders'));
   }, []);
 
-  const handleDelete = (orderId: string) => {
-    const updatedOrders = orders.filter((o) => o.id !== orderId);
-    setOrders(updatedOrders);
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
-    toast.success(`Order #${orderId.slice(-5)} has been deleted.`);
+  const handleDelete = async (orderId: string) => {
+    try {
+      await orderApi.delete(Number(orderId));
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      toast.success(`Order #${orderId.slice(-5)} has been deleted.`);
+    } catch {
+      toast.error('Failed to delete order.');
+    }
   };
 
   const handleEdit = (order: Order, viewOnly = false) => {
@@ -80,43 +63,17 @@ const Orders = () => {
   };
 
   const handleSave = (order: Order) => {
-    const newOrder: Order = {
-      ...order,
-      id: editingOrder ? order.id : `order_${Date.now()}`,
-      createdAt: editingOrder ? order.createdAt : new Date(),
-    };
-
     const updatedOrders = editingOrder
-      ? orders.map((o) => (o.id === order.id ? newOrder : o))
-      : [newOrder, ...orders];
+      ? orders.map((o) => (o.id === order.id ? order : o))
+      : [order, ...orders];
 
     setOrders(updatedOrders);
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
     setIsOpen(false);
     setEditingOrder(null);
     setIsViewingOnly(false);
     toast.success(
-      `Order for ${order.customerName} has been ${
-        editingOrder ? 'updated' : 'created'
-      }.`,
+      `Order for ${order.customerName} has been ${editingOrder ? 'updated' : 'created'}.`
     );
-  };
-
-  const handleStatusChange = (order: Order, newStatus: Order['status']) => {
-    const updatedOrder = { ...order, status: newStatus };
-    const updatedOrders = orders.map((o) =>
-      o.id === order.id ? updatedOrder : o,
-    );
-    setOrders(updatedOrders);
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
-    toast.success(`Order #${order.id.slice(-5)} status changed to ${newStatus}`);
-  };
-
-  const handleClearAll = () => {
-    localStorage.setItem('deletedOrdersBackup', JSON.stringify(orders)); // backup
-    setOrders([]);
-    localStorage.setItem('orders', JSON.stringify([]));
-    toast.success('All orders have been deleted and backed up to localStorage.');
   };
 
   const columns: ColumnsType<Order> = [
@@ -153,7 +110,7 @@ const Orders = () => {
       title: 'Time',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: Date) => new Date(date).toLocaleTimeString(),
+      render: (date: string) => new Date(date).toLocaleTimeString(),
     },
     {
       title: 'Status',
@@ -181,53 +138,26 @@ const Orders = () => {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, order) => {
-        const nextStatus: { [key in Order['status']]: Order['status'] } = {
-          pending: 'preparing',
-          preparing: 'ready',
-          ready: 'delivered',
-          delivered: 'delivered',
-          canceled: 'canceled',
-        };
-
-        return (
-          <Space>
-            <Button size="small" type="link" onClick={() => handleEdit(order, true)}>
-              View
-            </Button>
-            {order.status !== 'delivered' && order.status !== 'canceled' && (
-              <Button
-                size="small"
-                onClick={() => handleStatusChange(order, nextStatus[order.status])}
-              >
-                Next Status
-              </Button>
-            )}
-            {order.status === 'pending' && (
-              <Button
-                size="small"
-                danger
-                onClick={() => handleStatusChange(order, 'canceled')}
-              >
-                Cancel
-              </Button>
-            )}
-            <Popconfirm
-              title="Delete this order?"
-              onConfirm={() => handleDelete(order.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
-        );
-      },
+      render: (_, order) => (
+        <Space>
+          <Button size="small" type="link" onClick={() => handleEdit(order, true)}>
+            View
+          </Button>
+          <Popconfirm
+            title="Delete this order?"
+            onConfirm={() => handleDelete(order.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
     },
   ];
 
   const filteredOrders = orders.filter((order) =>
-    order.customerName.toLowerCase().includes(searchText.toLowerCase()),
+    order.customerName.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
@@ -238,9 +168,6 @@ const Orders = () => {
           <Typography.Text type="secondary">Manage customer orders.</Typography.Text>
         </div>
         <Space>
-          <Button icon={<DeleteOutlined />} danger onClick={handleClearAll}>
-            Clear All
-          </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -286,8 +213,19 @@ const Orders = () => {
           <OrderDetails order={editingOrder} />
         ) : (
           <OrderForm
-            initialData={editingOrder || undefined}
-            onSave={handleSave}
+            initialData={
+              editingOrder
+                ? {
+                    ...editingOrder,
+                    status: editingOrder.status as any, // Cast to OrderStatus if compatible, or map if needed
+                  }
+                : undefined
+            }
+            onSave={() => {
+              setIsOpen(false);
+              setEditingOrder(null);
+              setIsViewingOnly(false);
+            }}
             onCancel={() => setIsOpen(false)}
           />
         )}

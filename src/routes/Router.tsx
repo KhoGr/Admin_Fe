@@ -24,6 +24,7 @@ const Inventory=Loadable(lazy(()=>import("../pages/inventory/inventoryPage")))
 const SettingsPage=Loadable(lazy(()=>import("../pages/setting/Settings")))
 const WorkSchedulePage=Loadable(lazy(()=>import("../pages/workSchedule/WorkSchedule")))
 const ChatbotPage=Loadable(lazy(()=>import("../pages/chatbot/ChatBot")))
+const TablePage=Loadable(lazy(()=>import("../pages/table/TablePage")))
 
 
 
@@ -47,7 +48,8 @@ const Router = createBrowserRouter([
       {path:"/admin/inventory",element:<Inventory/>},
       {path:"/admin/settings",element:<SettingsPage/>},
       {path:"/admin/work-schedule",element:<WorkSchedulePage/>},
-      {path:"/admin/chatbot",element:<ChatbotPage/>}
+      {path:"/admin/chatbot",element:<ChatbotPage/>},
+      {path:"/admin/table",element:<TablePage/>}
 
     ],
   },
