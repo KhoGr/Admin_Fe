@@ -1,89 +1,87 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button, Tabs, Modal, Card, Table, Tooltip } from "antd";
 import { PlusOutlined, StarFilled } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CommentForm } from "../../components/comments/CommentForm";
-import { mockMenuItems } from "../../mock/mocks";
-import { v4 as uuidv4 } from "uuid";
+import {
+  Comment,
+  CommentResponse,
+  CreateCommentPayload,
+  UpdateCommentPayload,
+} from "../../types/comment";
+import commentApi from "../../api/commentApi";
+import menuItemApi from "../../api/menuItemApi";
+import { MenuItem } from "../../types/menuItem";
+
 
 const { TabPane } = Tabs;
 
-interface Comment {
-  id: string;
-  menuItemId: string;
-  menuItemName: string;
-  userName: string;
-  rating: number;
-  content: string;
-  createdAt: Date;
-}
-
-const LOCAL_STORAGE_KEY = "commentsData";
-
 const Comments = () => {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingComment, setEditingComment] = useState<Comment | null>(null);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Load from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored, (key, value) => {
-        if (key === "createdAt") return new Date(value);
-        return value;
-      });
-      setComments(parsed);
-    } else {
-      // initial load fallback
-      setComments([]);
-    }
+    fetchComments();
+    fetchMenuItems();
   }, []);
 
-  // Save to localStorage whenever comments change
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(comments));
-  }, [comments]);
+  const fetchComments = async () => {
+    try {
+      const res = await commentApi.getAll();
+      const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+      }));
+      setComments(formatted);
+    } catch {
+      toast.error("Failed to load comments");
+    }
+  };
+
+  const fetchMenuItems = async () => {
+    try {
+      const res = await menuItemApi.getAll();
+      setMenuItems(res.data);
+    } catch {
+      toast.error("Failed to load menu items");
+    }
+  };
 
   const handleEdit = (comment: Comment) => {
-    setEditingComment(comment);
+    setEditingComment(comment||null);
     setIsOpen(true);
   };
 
-  const handleSave = (comment: Omit<Comment, "id" | "createdAt">) => {
-    let newComments;
-    if (editingComment) {
-      // update
-      newComments = comments.map((c) =>
-        c.id === editingComment.id ? { ...editingComment, ...comment } : c
-      );
-    } else {
-      // add
-      newComments = [
-        {
-          ...comment,
-          id: uuidv4(),
-          createdAt: new Date(),
-        },
-        ...comments,
-      ];
+  const handleSave = async (
+    data: CreateCommentPayload | UpdateCommentPayload
+  ) => {
+    try {
+      if (editingComment) {
+        await commentApi.update(editingComment.id, data as UpdateCommentPayload);
+        toast.success("Comment updated successfully.");
+      } else {
+        await commentApi.create(data as CreateCommentPayload);
+        toast.success("Comment added successfully.");
+      }
+      setIsOpen(false);
+      setEditingComment(null);
+      fetchComments();
+    } catch {
+      toast.error("Failed to save comment");
     }
-
-    setComments(newComments);
-    setIsOpen(false);
-    setEditingComment(null);
-    toast.success(`Comment ${editingComment ? "updated" : "added"} successfully.`);
   };
 
-  const viewMenuItem = (menuItemId: string) => {
-    navigate(`/menu-items?highlight=${menuItemId}`);
+  const viewMenuItem = (id: string) => {
+    navigate(`/menu-items?highlight=${id}`);
   };
 
   const filteredComments = selectedMenuItemId
-    ? comments.filter((comment) => comment.menuItemId === selectedMenuItemId)
+    ? comments.filter((c) => c.menuItemId === selectedMenuItemId)
     : comments;
 
   const columns = [
@@ -145,7 +143,7 @@ const Comments = () => {
       title: "Date",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (date: Date) => new Date(date).toLocaleDateString(),
+      render: (date: Date) => date.toLocaleDateString(),
     },
     {
       title: "Actions",
@@ -161,15 +159,13 @@ const Comments = () => {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600 }}>Comments</h1>
-        </div>
+        <h1 style={{ fontSize: 24, fontWeight: 600 }}>Comments</h1>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => {
-            setIsOpen(true);
             setEditingComment(null);
+            setIsOpen(true);
           }}
         >
           Add Comment
@@ -184,8 +180,17 @@ const Comments = () => {
         destroyOnClose
       >
         <CommentForm
-          initialData={editingComment || null}
+          initialData={
+            editingComment
+              ? { ...editingComment, createdAt: editingComment.createdAt.toISOString() }
+              : null
+          }
           onSave={handleSave}
+          onSuccess={() => {
+            setIsOpen(false);
+            setEditingComment(null);
+            fetchComments();
+          }}
           onCancel={() => setIsOpen(false)}
           preselectedMenuItemId={selectedMenuItemId || undefined}
         />
@@ -202,46 +207,54 @@ const Comments = () => {
             />
           </Card>
         </TabPane>
+
         <TabPane tab="By Menu Item" key="by-item">
           <Card>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
-              {mockMenuItems.map((item) => (
-                <Card
-                  key={item.id}
-                  hoverable
-                  style={{
-                    width: 250,
-                    borderColor: selectedMenuItemId === item.id ? "#1890ff" : undefined,
-                    backgroundColor: selectedMenuItemId === item.id ? "#e6f7ff" : undefined,
-                  }}
-                  onClick={() => setSelectedMenuItemId(item.id)}
-                >
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      width={48}
-                      height={48}
-                      style={{ objectFit: "cover", borderRadius: 4 }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://placehold.co/100x100/png?text=No+Image";
-                      }}
-                    />
-                    <div>
-                      <h4 style={{ marginBottom: 4 }}>{item.name}</h4>
-                      <p style={{ fontSize: 12, color: "#888" }}>
-                        {comments.filter((c) => c.menuItemId === item.id).length} comments
-                      </p>
+              {menuItems.map((item) => {
+                const isSelected = selectedMenuItemId === item.item_id;
+                return (
+                  <Card
+                    key={item.item_id}
+                    hoverable
+                    onClick={() => setSelectedMenuItemId(item.item_id)}
+                    style={{
+                      width: 250,
+                      borderColor: isSelected ? "#1890ff" : undefined,
+                      backgroundColor: isSelected ? "#e6f7ff" : undefined,
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <img
+                        src={item.image_url }
+                        alt={item.name}
+                        width={48}
+                        height={48}
+                        style={{ objectFit: "cover", borderRadius: 4 }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "https://placehold.co/100x100/png?text=No+Image";
+                        }}
+                      />
+                      <div>
+                        <h4 style={{ marginBottom: 4 }}>{item.name}</h4>
+                        <p style={{ fontSize: 12, color: "#888" }}>
+                          {comments.filter((c) => c.menuItemId === item.item_id).length} comments
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
 
             {selectedMenuItemId ? (
-              <div>
+              <>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3>Comments for {mockMenuItems.find((m) => m.id === selectedMenuItemId)?.name}</h3>
+                  <h3>
+                    Comments for{" "}
+                    {menuItems.find((m) => m.item_id === selectedMenuItemId)?.name}
+                  </h3>
                   <Button
                     icon={<PlusOutlined />}
                     size="small"
@@ -259,7 +272,7 @@ const Comments = () => {
                   rowKey="id"
                   pagination={{ pageSize: 5 }}
                 />
-              </div>
+              </>
             ) : (
               <div style={{ textAlign: "center", padding: "64px 0", color: "#aaa" }}>
                 Select a menu item to view its comments

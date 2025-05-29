@@ -1,18 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import {
-  TextField,
-  Container,
-  Typography,
-  Box,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  MenuItem as MuiMenuItem,
-  useTheme,
-  InputAdornment,
-} from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { RootState, AppDispatch } from '../../redux/store';
@@ -22,7 +8,24 @@ import {
   updateMenuItem,
   searchMenuItems,
 } from '../../redux/slices/menuItem.slice';
-import { Modal, Input, Form, Select, Upload, message, Avatar, Space } from 'antd';
+
+import {
+  Typography,
+  Input,
+  Button,
+  Modal,
+  Select,
+  Form,
+  Row,
+  Col,
+  Space,
+  Avatar,
+  Upload,
+  message,
+} from 'antd';
+
+import ImgCrop from 'antd-img-crop';
+import { UploadOutlined } from '@ant-design/icons';
 
 import { MenuItem } from '../../types/menuItem';
 import { CreateMenuItemDTO } from '../../types/menuItem';
@@ -30,14 +33,12 @@ import { Category } from '../../types/category';
 import categoryApi from '../../api/categoryApi';
 import MenuItemTable from '../../components/menuItem/MenuItemTable';
 import menuItemApi from 'src/api/menuItemApi';
-import ImgCrop from 'antd-img-crop';
-import { UploadOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
+const { TextArea } = Input;
 
 const MenuItemPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const theme = useTheme();
   const [uploading, setUploading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,7 +50,12 @@ const MenuItemPage: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
 
   const { data: menuItems } = useSelector((state: RootState) => state.menuItems);
-  const { register, handleSubmit, reset, setValue } = useForm<CreateMenuItemDTO>();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+  } = useForm<CreateMenuItemDTO>();
 
   useEffect(() => {
     dispatch(fetchMenuItems());
@@ -72,7 +78,6 @@ const MenuItemPage: React.FC = () => {
       name: item.name,
       description: item.description,
       discount_percent: item.discount_percent,
-
       price: item.price,
       category_id: item.category_id,
       image_url: item.image_url,
@@ -85,19 +90,17 @@ const MenuItemPage: React.FC = () => {
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('image', file); // Thay 'avatar' bằng 'image' cho phù hợp
-
-      // Gọi API upload ảnh món ăn thay vì avatar user
+      formData.append('image', file);
       if (!selectedItem) throw new Error('No menu item selected');
-      const response = await menuItemApi.updateImage(selectedItem.item_id, formData);
+      const response = await menuItemApi.updateImage(Number(selectedItem.item_id), formData);
 
       if (response.status === 200) {
-        console.log('Upload ảnh thành công!');
-        // Cập nhật URL ảnh vào form
         form.setFieldsValue({ image_url: response.data.image_url });
+        message.success('Upload ảnh thành công!');
       }
     } catch (error: any) {
       console.error('Upload ảnh thất bại:', error);
+      message.error('Upload ảnh thất bại');
     } finally {
       setUploading(false);
     }
@@ -107,7 +110,7 @@ const MenuItemPage: React.FC = () => {
     if (!selectedItem) return;
     try {
       const values = await form.validateFields();
-      await dispatch(updateMenuItem({ id: selectedItem.item_id, data: values })).unwrap();
+      await dispatch(updateMenuItem({ id: Number(selectedItem.item_id), data: values })).unwrap();
       setDetailOpen(false);
     } catch (err) {
       console.error('Cập nhật thất bại', err);
@@ -115,131 +118,147 @@ const MenuItemPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ color: theme.palette.text.primary }}>
-        Danh sách món ăn
-      </Typography>
+    <div style={{ padding: 24 }}>
+      <Typography.Title level={3}>Danh sách món ăn</Typography.Title>
 
-      <Box display="flex" gap={2} mb={2}>
-        <TextField
-          label="Tìm kiếm món ăn..."
-          variant="outlined"
-          fullWidth
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{
-            input: { color: theme.palette.text.primary },
-            label: { color: theme.palette.text.secondary },
-          }}
-        />
-        <Select
-          allowClear
-          style={{ minWidth: 200,minHeight:56 }}
-          placeholder="Chọn danh mục"
-          value={selectedCategoryId}
-          onChange={(value) => setSelectedCategoryId(value)}
-        >
-          {categories.map((cat) => (
-            <Option key={cat.id} value={cat.id}>
-              {cat.name}
-            </Option>
-          ))}
-        </Select>
-        <Button variant="outlined" onClick={onSearch}>
-          Search
-        </Button>
-        <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
-          Add
-        </Button>
-      </Box>
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col flex="auto">
+          <Input
+            placeholder="Tìm kiếm món ăn..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ maxHeight: 30 }}
+          />
+        </Col>
+        <Col>
+          <Select
+            allowClear
+            style={{ width: 200 }}
+            placeholder="Chọn danh mục"
+            value={selectedCategoryId}
+            onChange={(value) => setSelectedCategoryId(value)}
+          >
+            {categories.map((cat) => (
+              <Option key={cat.id} value={cat.id}>
+                {cat.name}
+              </Option>
+            ))}
+          </Select>
+        </Col>
+        <Col>
+          <Button onClick={onSearch}>Tìm</Button>
+        </Col>
+        <Col>
+          <Button type="primary" onClick={() => setOpen(true)}>
+            Thêm
+          </Button>
+        </Col>
+      </Row>
 
       <MenuItemTable menuItems={menuItems} onDetail={handleDetail} categories={categories} />
 
-      {/* Modal thêm món ăn */}
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle
-          sx={{
-            backgroundColor: theme.palette.background.default,
-            color: theme.palette.text.primary,
-          }}
-        >
-          Thêm món ăn mới
-        </DialogTitle>
-        <DialogContent sx={{ backgroundColor: theme.palette.background.default }}>
-          <Box
-            component="form"
-            onSubmit={handleSubmit(onSubmit)}
-            display="flex"
-            flexDirection="column"
-            gap={2}
-            mt={1}
+      {/* Modal Thêm */}
+<Modal
+  title="Thêm món ăn mới"
+  open={open}
+  onCancel={() => setOpen(false)}
+  onOk={() => form.submit()}
+  okText="Lưu"
+  cancelText="Hủy"
+>
+<Form
+  layout="vertical"
+  form={form}
+  onFinish={(values) => {
+    dispatch(createMenuItem(values));
+    form.resetFields();
+    setOpen(false);
+  }}
+>
+    <Form.Item label="Tên món ăn" name="name" rules={[{ required: true }]}>
+      <Input />
+    </Form.Item>
+
+    <Form.Item label="Giảm giá (%)" name="discount_percent">
+      <Input type="number" />
+    </Form.Item>
+
+    <Form.Item label="Mô tả" name="description">
+      <TextArea rows={3} />
+    </Form.Item>
+
+    <Form.Item label="Giá" name="price" rules={[{ required: true }]}>
+      <Input
+        type="text"
+        addonAfter="₫"
+        onChange={(e) => {
+          const value = e.target.value.replace(/\D/g, '');
+          form.setFieldsValue({ price: value ? parseInt(value) : 0 });
+        }}
+      />
+    </Form.Item>
+
+    <Form.Item label="Ảnh món ăn" name="image_url">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <ImgCrop>
+          <Upload
+            showUploadList={false}
+            beforeUpload={(file) => {
+              const isImage = file.type.startsWith('image/');
+              if (!isImage) {
+                message.error('Chỉ có thể upload file ảnh!');
+                return false;
+              }
+              const isLt2M = file.size / 1024 / 1024 < 2;
+              if (!isLt2M) {
+                message.error('Ảnh phải nhỏ hơn 2MB!');
+                return false;
+              }
+              handleUpload(file); // Gọi logic upload và cập nhật form.setFieldsValue
+              return false;
+            }}
+            accept="image/*"
           >
-            <TextField label="Tên món ăn" fullWidth {...register('name', { required: true })} />
-            <TextField
-              label="Giảm giá (%)"
-              type="number"
-              fullWidth
-              {...register('discount_percent')}
-            />
+            {form.getFieldValue('image_url') ? (
+              <Avatar
+                size={100}
+                src={form.getFieldValue('image_url')}
+                style={{ cursor: 'pointer' }}
+              />
+            ) : (
+              <Avatar size={100} icon={<UploadOutlined />} style={{ cursor: 'pointer' }} />
+            )}
+          </Upload>
+        </ImgCrop>
+        <Button danger onClick={() => form.setFieldsValue({ image_url: null })} style={{ marginTop: 8 }}>
+          Xóa ảnh
+        </Button>
+      </div>
+    </Form.Item>
 
-            <TextField label="Mô tả" fullWidth multiline rows={3} {...register('description')} />
-            <TextField
-              label="Giá"
-              fullWidth
-              type="number"
-              {...register('price', {
-                required: true,
-                valueAsNumber: true,
-                onChange: (e) => {
-                  // Format giá trị khi hiển thị nhưng vẫn giữ giá trị số
-                  const value = e.target.value;
-                  if (value) {
-                    e.target.value = value.replace(/\D/g, '');
-                  }
-                },
-              })}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">₫</InputAdornment>,
-              }}
-            />
-            <TextField label="Link ảnh món ăn" fullWidth {...register('image_url')} />
-            <TextField
-              label="Trạng thái hiển thị"
-              fullWidth
-              select
-              defaultValue="true"
-              {...register('is_available')}
-              onChange={(e) => setValue('is_available', e.target.value === 'true')}
-            >
-              <MuiMenuItem value="true">Hiển thị</MuiMenuItem>
-              <MuiMenuItem value="false">Ẩn</MuiMenuItem>
-            </TextField>
-            <TextField
-              label="Danh mục"
-              fullWidth
-              select
-              {...register('category_id', { required: true })}
-              onChange={(e) => setValue('category_id', Number(e.target.value))}
-            >
-              {categories.map((category) => (
-                <MuiMenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MuiMenuItem>
-              ))}
-            </TextField>
-            <DialogActions>
-              <Button onClick={() => setOpen(false)} color="inherit">
-                Hủy
-              </Button>
-              <Button type="submit" variant="contained">
-                Lưu
-              </Button>
-            </DialogActions>
-          </Box>
-        </DialogContent>
-      </Dialog>
+    <Form.Item label="Trạng thái" name="is_available" initialValue={true}>
+      <Select>
+        <Option value={true}>Hiển thị</Option>
+        <Option value={false}>Ẩn</Option>
+      </Select>
+    </Form.Item>
 
-      {/* Modal xem chi tiết/sửa món ăn */}
+    <Form.Item label="Danh mục" name="category_id">
+      <Select>
+        {categories.map((cat) => (
+          <Option key={cat.id} value={cat.id}>
+            {cat.name}
+          </Option>
+        ))}
+      </Select>
+    </Form.Item>
+  </Form>
+</Modal>
+
+
+
+
+      {/* Modal Chi tiết */}
       <Modal
         open={detailOpen}
         title="Chi tiết món ăn"
@@ -253,17 +272,16 @@ const MenuItemPage: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item label="Mô tả" name="description">
-            <Input.TextArea rows={3} />
+            <TextArea rows={3} />
           </Form.Item>
           <Form.Item label="Giá" name="price">
             <Input
               type="text"
+              addonAfter="₫"
               onChange={(e) => {
-                // Chỉ cho phép nhập số
                 const value = e.target.value.replace(/\D/g, '');
                 form.setFieldsValue({ price: value ? parseInt(value) : 0 });
               }}
-              addonAfter="₫"
             />
           </Form.Item>
           <Form.Item label="Giảm giá (%)" name="discount_percent">
@@ -275,19 +293,16 @@ const MenuItemPage: React.FC = () => {
                 <Upload
                   showUploadList={false}
                   beforeUpload={(file) => {
-                    // Kiểm tra loại file và kích thước
                     const isImage = file.type.startsWith('image/');
                     if (!isImage) {
                       message.error('Chỉ có thể upload file ảnh!');
                       return false;
                     }
-
                     const isLt2M = file.size / 1024 / 1024 < 2;
                     if (!isLt2M) {
                       message.error('Ảnh phải nhỏ hơn 2MB!');
                       return false;
                     }
-
                     handleUpload(file);
                     return false;
                   }}
@@ -304,16 +319,11 @@ const MenuItemPage: React.FC = () => {
                   )}
                 </Upload>
               </ImgCrop>
-              <Button
-                color="error"
-                onClick={() => form.setFieldsValue({ image_url: null })}
-                style={{ marginTop: 8 }}
-              >
+              <Button danger onClick={() => form.setFieldsValue({ image_url: null })} style={{ marginTop: 8 }}>
                 Xóa ảnh
               </Button>
             </div>
           </Form.Item>
-
           <Form.Item label="Trạng thái hiển thị" name="is_available">
             <Select>
               <Option value={true}>Hiển thị</Option>
@@ -331,7 +341,7 @@ const MenuItemPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Container>
+    </div>
   );
 };
 
