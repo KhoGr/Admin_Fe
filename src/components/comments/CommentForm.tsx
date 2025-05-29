@@ -1,28 +1,27 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Form, Input, Select, Button, Rate, message } from "antd";
-import { mockMenuItems } from "../../mock/mocks";
 import { useEffect, useState } from "react";
+import { Form, Input, Select, Button, Rate, message } from "antd";
 import commentApi from "../../api/commentApi";
 import {
-  Comment,
-  CommentResponse,
   CreateCommentPayload,
   UpdateCommentPayload,
 } from "../../types/comment";
+import { z } from "zod";
+import menuItemApi from "../../api/menuItemApi";
+import customerApi from "../../api/customerApi";
+import { CustomerModel } from "../../types/Customer";
 
 const { TextArea } = Input;
+const { Option } = Select;
 
 const formSchema = z.object({
   menuItemId: z.string().min(1, "Menu item is required"),
-  userName: z.string().min(2, "Name must be at least 2 characters"),
+  userId: z.string().min(1, "Customer is required"),
+  userName: z.string().min(1, "Customer name is required"),
   rating: z.coerce.number().min(1).max(5),
   content: z.string().min(5, "Comment must be at least 5 characters"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
 
 interface CommentFormProps {
   initialData?: any;
@@ -31,6 +30,7 @@ interface CommentFormProps {
   onCancel?: () => void;
   preselectedMenuItemId?: string;
 }
+
 export function CommentForm({
   initialData,
   onSuccess,
@@ -39,11 +39,37 @@ export function CommentForm({
 }: CommentFormProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<CustomerModel[]>([]);
+
+  useEffect(() => {
+    fetchMenuItems();
+    fetchCustomers();
+  }, []);
+
+  const fetchMenuItems = async () => {
+    try {
+      const res = await menuItemApi.getAll();
+      setMenuItems(res.data);
+    } catch (error) {
+      message.error("Không thể tải danh sách món ăn");
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await customerApi.getAll();
+      setCustomers(res.data);
+    } catch (error) {
+      message.error("Không thể tải danh sách khách hàng");
+    }
+  };
 
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
         menuItemId: initialData.menuItemId,
+        userId: String(initialData.userId),
         userName: initialData.userName,
         rating: initialData.rating,
         content: initialData.content,
@@ -51,61 +77,83 @@ export function CommentForm({
     } else {
       form.setFieldsValue({
         menuItemId: preselectedMenuItemId || "",
-        userName: "",
         rating: 5,
         content: "",
       });
     }
   }, [initialData, preselectedMenuItemId, form]);
 
-  const handleFinish = async (values: FormValues) => {
-    setLoading(true);
-    try {
-      if (initialData) {
-        await commentApi.update(initialData.id, values);
-        message.success("Cập nhật bình luận thành công!");
-      } else {
-        await commentApi.create({
-          ...values,
-          userId: "1", // TODO: Replace with actual user id
-        });
-        message.success("Thêm bình luận thành công!");
-      }
-      onSuccess();
-    } catch (err) {
-      message.error("Lỗi khi lưu bình luận");
-    } finally {
-      setLoading(false);
+  const handleCustomerChange = (userId: string) => {
+    const customer = customers.find((c) => String(c.user_id) === userId);
+    if (customer) {
+      form.setFieldsValue({
+        userName: customer.user_info?.name,
+        
+      });
     }
   };
 
+const handleFinish = async (values: FormValues) => {
+  setLoading(true);
+  try {
+    const payload = {
+      item_id: parseInt(values.menuItemId),
+      customer_id: parseInt(values.userId),
+      user_name: values.userName,
+      rating: values.rating,
+      content: values.content,
+    };
+
+    if (initialData) {
+      await commentApi.update(initialData.id, payload);
+      message.success("Cập nhật bình luận thành công!");
+    } else {
+      await commentApi.create(payload);
+      message.success("Thêm bình luận thành công!");
+    }
+    onSuccess();
+  } catch (err) {
+    console.error("❌ Error submitting comment:", err);
+    message.error("Lỗi khi lưu bình luận");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
   return (
-    <Form
-      layout="vertical"
-      form={form}
-      onFinish={handleFinish}
-      autoComplete="off"
-    >
+    <Form layout="vertical" form={form} onFinish={handleFinish} autoComplete="off">
       <Form.Item
         label="Món ăn"
         name="menuItemId"
-        rules={[{ required: true, message: "Menu item is required" }]}
+        rules={[{ required: true, message: "Vui lòng chọn món ăn" }]}
       >
         <Select disabled={!!preselectedMenuItemId} placeholder="Chọn món ăn">
-          {mockMenuItems.map((item) => (
-            <Select.Option key={item.id} value={item.id}>
+          {menuItems.map((item) => (
+            <Option key={item.item_id} value={String(item.item_id)}>
               {item.name}
-            </Select.Option>
+            </Option>
           ))}
         </Select>
       </Form.Item>
 
       <Form.Item
-        label="Tên người dùng"
-        name="userName"
-        rules={[{ required: true, min: 2, message: "Name must be at least 2 characters" }]}
+        label="Khách hàng"
+        name="userId"
+        rules={[{ required: true, message: "Vui lòng chọn khách hàng" }]}
       >
-        <Input placeholder="Nguyễn Văn A" />
+        <Select placeholder="Chọn khách hàng" onChange={handleCustomerChange}>
+          {customers.map((customer) => (
+            <Option key={customer.user_id} value={String(customer.customer_id)}>
+              {customer.user_info?.name} ({customer.user_info?.account?.email})
+            </Option>
+          ))}
+        </Select>
+      </Form.Item>
+
+      <Form.Item name="userName" hidden>
+        <Input />
       </Form.Item>
 
       <Form.Item

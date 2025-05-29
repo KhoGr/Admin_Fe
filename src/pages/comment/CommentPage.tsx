@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Tabs, Modal, Card, Table, Tooltip } from "antd";
 import { PlusOutlined, StarFilled } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import { CommentForm } from "../../components/comments/CommentForm";
 import {
@@ -13,7 +14,7 @@ import {
 import commentApi from "../../api/commentApi";
 import menuItemApi from "../../api/menuItemApi";
 import { MenuItem } from "../../types/menuItem";
-
+import { RootState } from "../../redux/store";
 
 const { TabPane } = Tabs;
 
@@ -25,6 +26,8 @@ const Comments = () => {
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const auth = useSelector((state: RootState) => state.auth);
+
   useEffect(() => {
     fetchComments();
     fetchMenuItems();
@@ -35,7 +38,7 @@ const Comments = () => {
       const res = await commentApi.getAll();
       const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
         ...c,
-        createdAt: new Date(c.createdAt),
+        createdAt: new Date(c.created_at),
       }));
       setComments(formatted);
     } catch {
@@ -46,26 +49,29 @@ const Comments = () => {
   const fetchMenuItems = async () => {
     try {
       const res = await menuItemApi.getAll();
-      setMenuItems(res.data);
+      setMenuItems(res.data || []);
     } catch {
       toast.error("Failed to load menu items");
     }
   };
 
   const handleEdit = (comment: Comment) => {
-    setEditingComment(comment||null);
+    setEditingComment(comment);
     setIsOpen(true);
   };
 
-  const handleSave = async (
-    data: CreateCommentPayload | UpdateCommentPayload
-  ) => {
+  const handleSave = async (data: CreateCommentPayload | UpdateCommentPayload) => {
     try {
       if (editingComment) {
-        await commentApi.update(editingComment.id, data as UpdateCommentPayload);
+        await commentApi.update(String(editingComment.comment_id), data as UpdateCommentPayload);
         toast.success("Comment updated successfully.");
       } else {
-        await commentApi.create(data as CreateCommentPayload);
+        const payload: CreateCommentPayload = {
+          ...(data as CreateCommentPayload),
+          item_id: (data as CreateCommentPayload).item_id ?? selectedMenuItemId ?? "",
+          customer_id: Number(auth.user?.id ?? 1),
+        };
+        await commentApi.create(payload);
         toast.success("Comment added successfully.");
       }
       setIsOpen(false);
@@ -81,7 +87,7 @@ const Comments = () => {
   };
 
   const filteredComments = selectedMenuItemId
-    ? comments.filter((c) => c.menuItemId === selectedMenuItemId)
+    ? comments.filter((c) => String(c.item_id) === selectedMenuItemId)
     : comments;
 
   const columns = [
@@ -90,8 +96,8 @@ const Comments = () => {
       dataIndex: "menuItemName",
       key: "menuItemName",
       render: (_: any, record: Comment) => (
-        <Button type="link" onClick={() => viewMenuItem(record.menuItemId)}>
-          {record.menuItemName}
+        <Button type="link" onClick={() => viewMenuItem(String(record.item_id))}>
+          {record.menu_item_name || "Unnamed Item"}
         </Button>
       ),
     },
@@ -143,7 +149,10 @@ const Comments = () => {
       title: "Date",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (date: Date) => date.toLocaleDateString(),
+      render: (date: Date | string) => {
+        const d = typeof date === "string" ? new Date(date) : date;
+        return d.toLocaleDateString();
+      },
     },
     {
       title: "Actions",
@@ -176,22 +185,23 @@ const Comments = () => {
         open={isOpen}
         title={editingComment ? "Edit Comment" : "Add Comment"}
         footer={null}
-        onCancel={() => setIsOpen(false)}
+        onCancel={() => {
+          setIsOpen(false);
+          setEditingComment(null);
+        }}
         destroyOnClose
       >
         <CommentForm
-          initialData={
-            editingComment
-              ? { ...editingComment, createdAt: editingComment.createdAt.toISOString() }
-              : null
-          }
+          initialData={editingComment || undefined}
           onSave={handleSave}
           onSuccess={() => {
             setIsOpen(false);
             setEditingComment(null);
-            fetchComments();
           }}
-          onCancel={() => setIsOpen(false)}
+          onCancel={() => {
+            setIsOpen(false);
+            setEditingComment(null);
+          }}
           preselectedMenuItemId={selectedMenuItemId || undefined}
         />
       </Modal>
@@ -217,7 +227,11 @@ const Comments = () => {
                   <Card
                     key={item.item_id}
                     hoverable
-                    onClick={() => setSelectedMenuItemId(item.item_id)}
+                    onClick={() =>
+                      setSelectedMenuItemId((prev) =>
+                        prev === item.item_id ? null : item.item_id
+                      )
+                    }
                     style={{
                       width: 250,
                       borderColor: isSelected ? "#1890ff" : undefined,
@@ -226,7 +240,7 @@ const Comments = () => {
                   >
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                       <img
-                        src={item.image_url }
+                        src={item.image_url}
                         alt={item.name}
                         width={48}
                         height={48}
@@ -239,7 +253,7 @@ const Comments = () => {
                       <div>
                         <h4 style={{ marginBottom: 4 }}>{item.name}</h4>
                         <p style={{ fontSize: 12, color: "#888" }}>
-                          {comments.filter((c) => c.menuItemId === item.item_id).length} comments
+                          {comments.filter((c) => String(c.item_id) === String(item.item_id)).length} comments
                         </p>
                       </div>
                     </div>

@@ -145,7 +145,9 @@ const menuItemsSlice = createSlice({
 
       // DELETE
       .addCase(deleteMenuItem.fulfilled, (state, action) => {
-        state.data = state.data.filter((item) => item.item_id !== action.payload);
+        if (typeof action.payload === 'number') {
+          state.data = state.data.filter((item) => Number(item.item_id) !== action.payload);
+        }
       });
   },
 });

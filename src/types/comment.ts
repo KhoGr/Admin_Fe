@@ -1,19 +1,19 @@
 // Interface chính hiển thị comment trong UI
 export interface Comment {
-  id: string; // comment_id
-  menuItemId: string; // item_id
-  menuItemName: string; // MenuItem.name (populated)
-  userId: string; // customer_id
-  userName: string; // Customer.full_name (populated)
+  comment_id: number; // backend trả về comment_id
+  item_id: number; // menu item ID
+  menu_item_name: string;
+  customer_id: number; // user ID (customer)
+  user_name: string;
   rating: number;
   content: string;
-  createdAt: Date;
+  created_at: string; // ISO string từ server
 }
 
-// Payload khi tạo comment mới
+// Payload khi tạo comment mới (snake_case để gửi tới backend)
 export interface CreateCommentPayload {
-  menuItemId: string; // item_id
-  userId: string; // customer_id
+  item_id: number;
+  customer_id: number;
   rating: number;
   content?: string;
 }
@@ -24,26 +24,19 @@ export interface UpdateCommentPayload {
   content?: string;
 }
 
-// Dữ liệu trả về cho mỗi comment trong danh sách
-export interface CommentResponse {
-  id: string;
-  menuItemId: string;
-  menuItemName: string;
-  userId: string;
-  userName: string;
-  rating: number;
-  content: string;
-  createdAt: string; // ISO string từ server
-}
+// Dữ liệu trả về cho mỗi comment trong danh sách (đồng nhất với `Comment`)
+export type CommentResponse = Comment;
 
-// Payload để tìm kiếm comment (optional các field)
+// Payload để tìm kiếm comment (giữ nguyên vì là optional params ở frontend)
 export interface SearchCommentQuery {
-  menuItemName?: string;
-  userName?: string;
+  menu_item_name?: string;
+  user_name?: string;
   rating?: number;
 }
+
+// Props cho CommentForm
 export interface CommentFormProps {
-  initialData?: any;
+  initialData?: Partial<Comment>;
   onSave: (data: CreateCommentPayload | UpdateCommentPayload) => Promise<void>;
   onCancel: () => void;
   preselectedMenuItemId?: string;
