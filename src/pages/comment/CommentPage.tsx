@@ -28,23 +28,28 @@ const Comments = () => {
 
   const auth = useSelector((state: RootState) => state.auth);
 
-  useEffect(() => {
-    fetchComments();
-    fetchMenuItems();
-  }, []);
 
-  const fetchComments = async () => {
-    try {
-      const res = await commentApi.getAll();
-      const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
-        ...c,
-        createdAt: new Date(c.created_at),
-      }));
-      setComments(formatted);
-    } catch {
-      toast.error("Failed to load comments");
-    }
-  };
+
+const fetchComments = async () => {
+  try {
+    const res = await commentApi.getAll();
+const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
+  comment_id: c.comment_id,
+  item_id: c.item_id,
+  customer_id: c.customer_id,
+  rating: c.rating,
+  comment: c.comment,
+  created_at: c.created_at,
+  updated_at: c.updated_at,
+  menu_item_name: c.commented_item?.name || "Unnamed Item",
+  user_name: c.commenter?.user_info?.name || "Anonymous",
+}));
+    setComments(formatted);
+  } catch {
+    toast.error("Failed to load comments");
+  }
+};
+
 
   const fetchMenuItems = async () => {
     try {
@@ -54,10 +59,14 @@ const Comments = () => {
       toast.error("Failed to load menu items");
     }
   };
-
+  useEffect(() => {
+    fetchComments();
+    fetchMenuItems();
+  }, []);
   const handleEdit = (comment: Comment) => {
     setEditingComment(comment);
     setIsOpen(true);
+      console.log("Editing comment:", comment);
   };
 
   const handleSave = async (data: CreateCommentPayload | UpdateCommentPayload) => {
@@ -102,9 +111,9 @@ const Comments = () => {
       ),
     },
     {
-      title: "User",
-      dataIndex: "userName",
-      key: "userName",
+      title: "UserName",
+      dataIndex: "user_name",
+      key: "user_name",
     },
     {
       title: "Rating",
@@ -128,8 +137,8 @@ const Comments = () => {
     },
     {
       title: "Comment",
-      dataIndex: "content",
-      key: "content",
+      dataIndex: "comment",
+      key: "comment",
       render: (text: string) => (
         <Tooltip title={text}>
           <div
@@ -145,15 +154,17 @@ const Comments = () => {
         </Tooltip>
       ),
     },
-    {
-      title: "Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: Date | string) => {
-        const d = typeof date === "string" ? new Date(date) : date;
-        return d.toLocaleDateString();
-      },
-    },
+{
+  title: "Date",
+  dataIndex: "created_at",
+  key: "created_at",
+  render: (date: Date | string | undefined | null) => {
+    if (!date) return "N/A";
+    const d = typeof date === "string" ? new Date(date) : date;
+    return isNaN(d.getTime()) ? "Invalid Date" : d.toLocaleDateString();
+  },
+},
+
     {
       title: "Actions",
       key: "actions",
@@ -197,6 +208,7 @@ const Comments = () => {
           onSuccess={() => {
             setIsOpen(false);
             setEditingComment(null);
+            fetchComments();
           }}
           onCancel={() => {
             setIsOpen(false);
@@ -212,7 +224,7 @@ const Comments = () => {
             <Table
               columns={columns}
               dataSource={comments}
-              rowKey="id"
+              rowKey="comment_id"
               pagination={{ pageSize: 5 }}
             />
           </Card>
@@ -283,7 +295,7 @@ const Comments = () => {
                 <Table
                   columns={columns}
                   dataSource={filteredComments}
-                  rowKey="id"
+                  rowKey="comment_id"
                   pagination={{ pageSize: 5 }}
                 />
               </>

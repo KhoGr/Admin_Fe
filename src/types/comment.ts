@@ -1,33 +1,63 @@
 // Interface chính hiển thị comment trong UI
 export interface Comment {
-  comment_id: number; // backend trả về comment_id
-  item_id: number; // menu item ID
-  menu_item_name: string;
-  customer_id: number; // user ID (customer)
-  user_name: string;
+  comment_id: number;
+  item_id: number;
+  customer_id: number;
   rating: number;
-  content: string;
-  created_at: string; // ISO string từ server
+  comment: string;
+  created_at: string; // ISO string
+  updated_at: string;
+
+  // Phát sinh thêm để hiển thị trong UI
+  menu_item_name: string;
+  user_name: string;
 }
 
-// Payload khi tạo comment mới (snake_case để gửi tới backend)
+// Dữ liệu trả về từ backend
+export interface CommentResponse {
+  comment_id: number;
+  item_id: number;
+  customer_id: number;
+  rating: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+
+  commenter: {
+    customer_id: number;
+    user_id: number;
+    loyalty_point: number;
+    total_spent: string;
+    membership_level: string;
+    note: string;
+    created_at: string;
+    updated_at: string;
+    user_info: {
+      name: string;
+      avatar: string | null;
+    };
+  };
+
+  commented_item: {
+    name: string;
+  };
+}
+
+// Payload khi tạo comment mới
 export interface CreateCommentPayload {
   item_id: number;
   customer_id: number;
   rating: number;
-  content?: string;
+  comment?: string;
 }
 
 // Payload khi cập nhật comment
 export interface UpdateCommentPayload {
   rating: number;
-  content?: string;
+  comment?: string;
 }
 
-// Dữ liệu trả về cho mỗi comment trong danh sách (đồng nhất với `Comment`)
-export type CommentResponse = Comment;
-
-// Payload để tìm kiếm comment (giữ nguyên vì là optional params ở frontend)
+// Payload để tìm kiếm comment
 export interface SearchCommentQuery {
   menu_item_name?: string;
   user_name?: string;

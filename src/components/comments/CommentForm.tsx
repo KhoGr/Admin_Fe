@@ -18,7 +18,7 @@ const formSchema = z.object({
   userId: z.string().min(1, "Customer is required"),
   userName: z.string().min(1, "Customer name is required"),
   rating: z.coerce.number().min(1).max(5),
-  content: z.string().min(5, "Comment must be at least 5 characters"),
+  comment: z.string().min(5, "Comment must be at least 5 characters"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -42,11 +42,13 @@ export function CommentForm({
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [customers, setCustomers] = useState<CustomerModel[]>([]);
 
+  // Fetch menu items and customers
   useEffect(() => {
     fetchMenuItems();
     fetchCustomers();
   }, []);
 
+  // Fetch Menu Items
   const fetchMenuItems = async () => {
     try {
       const res = await menuItemApi.getAll();
@@ -56,6 +58,7 @@ export function CommentForm({
     }
   };
 
+  // Fetch Customers
   const fetchCustomers = async () => {
     try {
       const res = await customerApi.getAll();
@@ -65,62 +68,62 @@ export function CommentForm({
     }
   };
 
+  // Set fields when initialData or preselectedMenuItemId changes
   useEffect(() => {
-    if (initialData) {
+    if (initialData && customers.length > 0 && menuItems.length > 0) {
       form.setFieldsValue({
-        menuItemId: initialData.menuItemId,
-        userId: String(initialData.userId),
-        userName: initialData.userName,
+        menuItemId: String(initialData.item_id), // match with form field
+        userId: String(initialData.customer_id), // match with form field
+        userName: initialData.user_name,          // match with form field
         rating: initialData.rating,
-        content: initialData.content,
+        comment: initialData.comment,            // match with form field
       });
     } else {
       form.setFieldsValue({
         menuItemId: preselectedMenuItemId || "",
         rating: 5,
-        content: "",
+        comment: "",
       });
     }
-  }, [initialData, preselectedMenuItemId, form]);
+  }, [initialData, customers, menuItems, form]);
 
+  // Handle customer change to populate userName
   const handleCustomerChange = (userId: string) => {
-    const customer = customers.find((c) => String(c.user_id) === userId);
+    const customer = customers.find((c) => String(c.customer_id) === userId);
     if (customer) {
       form.setFieldsValue({
         userName: customer.user_info?.name,
-        
       });
     }
   };
 
-const handleFinish = async (values: FormValues) => {
-  setLoading(true);
-  try {
-    const payload = {
-      item_id: parseInt(values.menuItemId),
-      customer_id: parseInt(values.userId),
-      user_name: values.userName,
-      rating: values.rating,
-      content: values.content,
-    };
+  // Handle form submission
+  const handleFinish = async (values: FormValues) => {
+    setLoading(true);
+    try {
+      const payload = {
+        item_id: parseInt(values.menuItemId),
+        customer_id: parseInt(values.userId),
+        user_name: values.userName,
+        rating: values.rating,
+        comment: values.comment,
+      };
 
-    if (initialData) {
-      await commentApi.update(initialData.id, payload);
-      message.success("Cập nhật bình luận thành công!");
-    } else {
-      await commentApi.create(payload);
-      message.success("Thêm bình luận thành công!");
+      if (initialData) {
+        await commentApi.update(initialData.comment_id, payload);
+        message.success("Cập nhật bình luận thành công!");
+      } else {
+        await commentApi.create(payload);
+        message.success("Thêm bình luận thành công!");
+      }
+      onSuccess();
+    } catch (err) {
+      console.error("❌ Error submitting comment:", err);
+      message.error("Lỗi khi lưu bình luận");
+    } finally {
+      setLoading(false);
     }
-    onSuccess();
-  } catch (err) {
-    console.error("❌ Error submitting comment:", err);
-    message.error("Lỗi khi lưu bình luận");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+  };
 
   return (
     <Form layout="vertical" form={form} onFinish={handleFinish} autoComplete="off">
@@ -145,7 +148,7 @@ const handleFinish = async (values: FormValues) => {
       >
         <Select placeholder="Chọn khách hàng" onChange={handleCustomerChange}>
           {customers.map((customer) => (
-            <Option key={customer.user_id} value={String(customer.customer_id)}>
+            <Option key={customer.customer_id} value={String(customer.customer_id)}>
               {customer.user_info?.name} ({customer.user_info?.account?.email})
             </Option>
           ))}
@@ -166,7 +169,7 @@ const handleFinish = async (values: FormValues) => {
 
       <Form.Item
         label="Bình luận"
-        name="content"
+        name="comment"
         rules={[{ required: true, min: 5, message: "Bình luận phải ít nhất 5 ký tự" }]}
       >
         <TextArea rows={4} placeholder="Chia sẻ cảm nhận của bạn về món ăn..." />
