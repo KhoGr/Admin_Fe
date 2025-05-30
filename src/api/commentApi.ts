@@ -37,6 +37,8 @@ const commentApi = {
 
   // Tìm kiếm comment theo rating, tên khách hàng, tên món ăn
   search(params: SearchCommentQuery) {
+      console.log('📨 Sending filters to backend:', params);
+
     return axiosClient.get<CommentResponse[]>(`${URL}/search`, {
       params,
     });

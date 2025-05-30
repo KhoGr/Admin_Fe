@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button, Tabs, Modal, Card, Table, Tooltip } from "antd";
-import { PlusOutlined, StarFilled } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { Button, Tabs, Modal } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import { CommentForm } from "../../components/comments/CommentForm";
@@ -15,6 +14,8 @@ import commentApi from "../../api/commentApi";
 import menuItemApi from "../../api/menuItemApi";
 import { MenuItem } from "../../types/menuItem";
 import { RootState } from "../../redux/store";
+import AllCommentsTab from "../../components/comments/AllCommentsTab";
+import CommentsByMenuItemTab from "../../components/comments/CommentsByMenuItemTab";
 
 const { TabPane } = Tabs;
 
@@ -24,32 +25,28 @@ const Comments = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editingComment, setEditingComment] = useState<Comment | null>(null);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const auth = useSelector((state: RootState) => state.auth);
 
-
-
-const fetchComments = async () => {
-  try {
-    const res = await commentApi.getAll();
-const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
-  comment_id: c.comment_id,
-  item_id: c.item_id,
-  customer_id: c.customer_id,
-  rating: c.rating,
-  comment: c.comment,
-  created_at: c.created_at,
-  updated_at: c.updated_at,
-  menu_item_name: c.commented_item?.name || "Unnamed Item",
-  user_name: c.commenter?.user_info?.name || "Anonymous",
-}));
-    setComments(formatted);
-  } catch {
-    toast.error("Failed to load comments");
-  }
-};
-
+  const fetchComments = async () => {
+    try {
+      const res = await commentApi.getAll();
+      const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
+        comment_id: c.comment_id,
+        item_id: c.item_id,
+        customer_id: c.customer_id,
+        rating: c.rating,
+        comment: c.comment,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        menu_item_name: c.commented_item?.name || "Unnamed Item",
+        user_name: c.commenter?.user_info?.name || "Anonymous",
+      }));
+      setComments(formatted);
+    } catch {
+      toast.error("Failed to load comments");
+    }
+  };
 
   const fetchMenuItems = async () => {
     try {
@@ -59,15 +56,11 @@ const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
       toast.error("Failed to load menu items");
     }
   };
+
   useEffect(() => {
     fetchComments();
     fetchMenuItems();
   }, []);
-  const handleEdit = (comment: Comment) => {
-    setEditingComment(comment);
-    setIsOpen(true);
-      console.log("Editing comment:", comment);
-  };
 
   const handleSave = async (data: CreateCommentPayload | UpdateCommentPayload) => {
     try {
@@ -91,90 +84,39 @@ const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
     }
   };
 
-  const viewMenuItem = (id: string) => {
-    navigate(`/menu-items?highlight=${id}`);
+  const handleDelete = async (commentId: string) => {
+    try {
+      await commentApi.delete(commentId);
+      toast.success("Comment deleted successfully.");
+      fetchComments();
+    } catch {
+      toast.error("Failed to delete comment");
+    }
   };
 
-  const filteredComments = selectedMenuItemId
-    ? comments.filter((c) => String(c.item_id) === selectedMenuItemId)
-    : comments;
-
-  const columns = [
-    {
-      title: "Menu Item",
-      dataIndex: "menuItemName",
-      key: "menuItemName",
-      render: (_: any, record: Comment) => (
-        <Button type="link" onClick={() => viewMenuItem(String(record.item_id))}>
-          {record.menu_item_name || "Unnamed Item"}
-        </Button>
-      ),
-    },
-    {
-      title: "UserName",
-      dataIndex: "user_name",
-      key: "user_name",
-    },
-    {
-      title: "Rating",
-      dataIndex: "rating",
-      key: "rating",
-      render: (_: any, record: Comment) => (
-        <div>
-          {[...Array(5)].map((_, i) => (
-            <StarFilled
-              key={i}
-              style={{
-                color: i < record.rating ? "#fadb14" : "#d9d9d9",
-                fontSize: 14,
-                marginRight: 2,
-              }}
-            />
-          ))}
-          <span style={{ marginLeft: 8 }}>{record.rating}/5</span>
-        </div>
-      ),
-    },
-    {
-      title: "Comment",
-      dataIndex: "comment",
-      key: "comment",
-      render: (text: string) => (
-        <Tooltip title={text}>
-          <div
-            style={{
-              maxWidth: 300,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {text}
-          </div>
-        </Tooltip>
-      ),
-    },
-{
-  title: "Date",
-  dataIndex: "created_at",
-  key: "created_at",
-  render: (date: Date | string | undefined | null) => {
-    if (!date) return "N/A";
-    const d = typeof date === "string" ? new Date(date) : date;
-    return isNaN(d.getTime()) ? "Invalid Date" : d.toLocaleDateString();
-  },
-},
-
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_: any, record: Comment) => (
-        <Button size="small" onClick={() => handleEdit(record)}>
-          Edit
-        </Button>
-      ),
-    },
-  ];
+  const handleSearch = async (filters: {
+    itemName?: string;
+   customerId?: number;
+    rating?: number;
+  }) => {
+    try {
+      const res = await commentApi.search(filters);
+      const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
+        comment_id: c.comment_id,
+        item_id: c.item_id,
+        customer_id: c.customer_id,
+        rating: c.rating,
+        comment: c.comment,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        menu_item_name: c.commented_item?.name || "Unnamed Item",
+        user_name: c.commenter?.user_info?.name || "Anonymous",
+      }));
+      setComments(formatted);
+    } catch {
+      toast.error("Failed to search comments");
+    }
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -220,91 +162,30 @@ const formatted: Comment[] = res.data.map((c: CommentResponse) => ({
 
       <Tabs defaultActiveKey="all">
         <TabPane tab="All Comments" key="all">
-          <Card>
-            <Table
-              columns={columns}
-              dataSource={comments}
-              rowKey="comment_id"
-              pagination={{ pageSize: 5 }}
-            />
-          </Card>
+          <AllCommentsTab
+            comments={comments}
+            onEdit={(comment) => {
+              setEditingComment(comment);
+              setIsOpen(true);
+            }}
+            setIsOpen={setIsOpen}
+            onDelete={handleDelete}
+            onSearch={handleSearch}
+          />
         </TabPane>
-
         <TabPane tab="By Menu Item" key="by-item">
-          <Card>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
-              {menuItems.map((item) => {
-                const isSelected = selectedMenuItemId === item.item_id;
-                return (
-                  <Card
-                    key={item.item_id}
-                    hoverable
-                    onClick={() =>
-                      setSelectedMenuItemId((prev) =>
-                        prev === item.item_id ? null : item.item_id
-                      )
-                    }
-                    style={{
-                      width: 250,
-                      borderColor: isSelected ? "#1890ff" : undefined,
-                      backgroundColor: isSelected ? "#e6f7ff" : undefined,
-                    }}
-                  >
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        width={48}
-                        height={48}
-                        style={{ objectFit: "cover", borderRadius: 4 }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://placehold.co/100x100/png?text=No+Image";
-                        }}
-                      />
-                      <div>
-                        <h4 style={{ marginBottom: 4 }}>{item.name}</h4>
-                        <p style={{ fontSize: 12, color: "#888" }}>
-                          {comments.filter((c) => String(c.item_id) === String(item.item_id)).length} comments
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {selectedMenuItemId ? (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3>
-                    Comments for{" "}
-                    {menuItems.find((m) => m.item_id === selectedMenuItemId)?.name}
-                  </h3>
-                  <Button
-                    icon={<PlusOutlined />}
-                    size="small"
-                    onClick={() => {
-                      setEditingComment(null);
-                      setIsOpen(true);
-                    }}
-                  >
-                    Add Comment
-                  </Button>
-                </div>
-                <Table
-                  columns={columns}
-                  dataSource={filteredComments}
-                  rowKey="comment_id"
-                  pagination={{ pageSize: 5 }}
-                />
-              </>
-            ) : (
-              <div style={{ textAlign: "center", padding: "64px 0", color: "#aaa" }}>
-                Select a menu item to view its comments
-              </div>
-            )}
-          </Card>
+          <CommentsByMenuItemTab
+            comments={comments}
+            menuItems={menuItems}
+            selectedMenuItemId={selectedMenuItemId}
+            setSelectedMenuItemId={setSelectedMenuItemId}
+            onEdit={(comment) => {
+              setEditingComment(comment);
+              setIsOpen(true);
+            }}
+            setIsOpen={setIsOpen}
+            onDelete={handleDelete}
+          />
         </TabPane>
       </Tabs>
     </div>
