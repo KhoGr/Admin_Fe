@@ -1,0 +1,17 @@
+/* .table-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.table-tag {
+  flex: 0 0 calc(33.333% - 8px);
+  text-align: center;
+  padding: 6px 8px;
+  border: 1px solid #b7eb8f;
+  background-color: #f6ffed;
+  color: #389e0d;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+} */

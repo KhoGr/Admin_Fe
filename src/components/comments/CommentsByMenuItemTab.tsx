@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Card, Table, Button, Popconfirm, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Comment } from '../../types/comment';
@@ -22,7 +23,15 @@ const CommentsByMenuItemTab = ({
   setIsOpen,
   onDelete,
 }: Props) => {
-  // ✅ Fix: so sánh item_id sau khi ép kiểu để đảm bảo hoạt động đúng
+  const tableRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ Auto scroll to table when a menu item is selected
+  useEffect(() => {
+    if (selectedMenuItemId && tableRef.current) {
+      tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedMenuItemId]);
+
   const filteredComments = selectedMenuItemId
     ? comments.filter((c) => String(c.item_id) === String(selectedMenuItemId))
     : [];
@@ -80,9 +89,7 @@ const CommentsByMenuItemTab = ({
               key={item.item_id}
               hoverable
               onClick={() =>
-                setSelectedMenuItemId(
-                  isSelected ? null : String(item.item_id)
-                )
+                setSelectedMenuItemId(isSelected ? null : String(item.item_id))
               }
               style={{
                 width: 250,
@@ -111,7 +118,7 @@ const CommentsByMenuItemTab = ({
       </div>
 
       {selectedMenuItemId ? (
-        <>
+        <div ref={tableRef}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
             <h3>
               Comments for{' '}
@@ -134,7 +141,7 @@ const CommentsByMenuItemTab = ({
             rowKey="comment_id"
             pagination={{ pageSize: 5 }}
           />
-        </>
+        </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '64px 0', color: '#aaa' }}>
           Select a menu item to view its comments

@@ -1,112 +1,108 @@
-// order.types.ts
-
-export type OrderStatus =
-  | 'pending'
-  | 'preparing'
-  | 'served'
-  | 'completed'
-  | 'cancelled'
-  | 'refunded';
-
-export type OrderType = 'dine-in' | 'take-away' | 'delivery';
-
-export interface OrderItemModel {
-  order_item_id: number;
+// Một mục trong đơn hàng
+export interface OrderItem {
+  id: number;
   order_id: number;
-  item_id: number;
+  product_id: number;
   quantity: number;
-  price: number | string;
+  price: string;        // đơn giá
+  total_price: string;  // price * quantity
+  created_at: string;
+  updated_at: string;
 
-  menu_item?: {
-    item_id: number;
+  product?: {
     name: string;
-    description?: string;
-    price: number | string;
-    image?: string;
-    category_id?: number;
+    image?: string | null;
   };
 }
 
-export interface OrderModel {
-  order_id: number;
-  customer_id?: number | null;
-  table_id?: number | null;
-  guest_count?: number | null;
-  order_type: OrderType;
-  order_date: string;
-  total_amount?: number | string | null;
-  discount_amount: number | string;
-  final_amount?: number | string | null;
-  status: OrderStatus;
-  payment_method?: string | null;
+// Interface hiển thị đơn hàng trong UI
+export interface Order {
+  id: number;
+  customer_id: number | null;
+  table_id: number | null;
+  guest_count: number | null;
+  order_type: 'dine-in' | 'take-away' | 'delivery';
+  order_date: string; // ISO string
+  total_amount: string;
+  discount_amount: string;
+  final_amount: string;
+  status: 'pending' | 'preparing' | 'served' | 'completed' | 'cancelled' | 'refunded';
+  payment_method: string | null;
   is_paid: boolean;
-  note?: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+
+  // Dùng để hiển thị thêm thông tin trong UI
+  customer_name?: string;
+  table_name?: string;
+  order_items?: OrderItem[];
+}
+
+// Dữ liệu từ backend (bao gồm cả quan hệ)
+export interface OrderResponse {
+  id: number;
+  customer_id: number | null;
+  table_id: number | null;
+  guest_count: number | null;
+  order_type: 'dine-in' | 'take-away' | 'delivery';
+  order_date: string;
+  total_amount: string;
+  discount_amount: string;
+  final_amount: string;
+  status: 'pending' | 'preparing' | 'served' | 'completed' | 'cancelled' | 'refunded';
+  payment_method: string | null;
+  is_paid: boolean;
+  note: string | null;
   created_at: string;
   updated_at: string;
 
   customer?: {
-    customer_id: number;
-    name: string;
-    phone?: string;
-    email?: string;
-    address?: string;
+    id: number;
+    user_info: {
+      name: string;
+      avatar: string | null;
+    };
   };
 
   table?: {
-    table_id: number;
+    id: number;
     name: string;
-    location?: string;
-    capacity?: number;
+    capacity: number;
   };
 
-  order_items?: OrderItemModel[];
+  order_items?: OrderItem[];
 }
 
-export interface OrderCreateRequest {
+// Payload để tạo đơn hàng
+export interface CreateOrderPayload {
   customer_id?: number;
   table_id?: number;
   guest_count?: number;
-  order_type?: OrderType;
-  discount_amount?: number;
-  payment_method?: string;
+  order_type: 'dine-in' | 'take-away' | 'delivery';
   note?: string;
+  order_date:string;
   order_items: {
-    item_id: number;
+    product_id: number;
     quantity: number;
-    price?: number;
+    price?: number; // optional nếu server tự lấy từ DB
   }[];
 }
 
-export interface OrderUpdateStatusRequest {
-  status: OrderStatus;
+// Payload để cập nhật trạng thái đơn hàng
+export interface UpdateOrderStatusPayload {
+  status: 'pending' | 'preparing' | 'served' | 'completed' | 'cancelled' | 'refunded';
 }
 
-export interface OrderMarkPaidRequest {
-  is_paid: boolean;
+// Payload để đánh dấu đã thanh toán
+export interface MarkAsPaidPayload {
+  method: string; // ví dụ: "cash", "credit_card", "momo"
 }
 
-export interface OrderRecalculateRequest {
-  // No payload required if just recalculating on server
-}
-
-export interface OrderSearchParams {
+// Payload để tìm kiếm đơn hàng
+export interface SearchOrderQuery {
   keyword?: string;
-  status?: OrderStatus;
-  date_from?: string; // ISO format
-  date_to?: string;   // ISO format
-}
-
-export interface OrderCreateRequest {
-  customer_id?: number;
-  table_id?: number;
-  guest_count?: number;
-  order_type?: 'dine-in' | 'take-away' | 'delivery';
-  discount_amount?: number;
-  payment_method?: string;
-  note?: string;
-  order_items: {
-    item_id: number;
-    quantity: number;
-    price?: number;
-  }[];
+  status?: string;
+  date_from?: string;
+  date_to?: string;
 }

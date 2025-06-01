@@ -25,6 +25,7 @@ const SettingsPage=Loadable(lazy(()=>import("../pages/setting/Settings")))
 const WorkSchedulePage=Loadable(lazy(()=>import("../pages/workSchedule/WorkSchedule")))
 const ChatbotPage=Loadable(lazy(()=>import("../pages/chatbot/ChatBot")))
 const TablePage=Loadable(lazy(()=>import("../pages/table/TablePage")))
+const VipPage=Loadable(lazy(()=>import("../pages/vip/VipCustomers")))
 
 
 
@@ -49,7 +50,8 @@ const Router = createBrowserRouter([
       {path:"/admin/settings",element:<SettingsPage/>},
       {path:"/admin/work-schedule",element:<WorkSchedulePage/>},
       {path:"/admin/chatbot",element:<ChatbotPage/>},
-      {path:"/admin/table",element:<TablePage/>}
+      {path:"/admin/table",element:<TablePage/>},
+      {path:"/admin/vip",element:<VipPage/>}
 
     ],
   },

@@ -29,9 +29,9 @@ const Orders = () => {
   const [isViewingOnly, setIsViewingOnly] = useState(false);
 
   useEffect(() => {
-    orderApi.getAll()
+    orderApi
+      .getAll()
       .then((orderModels) => {
-        // Map OrderModel[] to Order[] if needed
         const mappedOrders: Order[] = orderModels.map((o: any) => ({
           id: o.id,
           customerName: o.customerName,
@@ -46,11 +46,11 @@ const Orders = () => {
       .catch(() => toast.error('Failed to load orders'));
   }, []);
 
-  const handleDelete = async (orderId: string) => {
+  const handleDelete = async (orderId: string | number) => {
     try {
       await orderApi.delete(Number(orderId));
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      toast.success(`Order #${orderId.slice(-5)} has been deleted.`);
+      setOrders((prev) => prev.filter((o) => Number(o.id) !== Number(orderId)));
+      toast.success(`Order #${String(orderId).slice(-5)} has been deleted.`);
     } catch {
       toast.error('Failed to delete order.');
     }
@@ -72,7 +72,9 @@ const Orders = () => {
     setEditingOrder(null);
     setIsViewingOnly(false);
     toast.success(
-      `Order for ${order.customerName} has been ${editingOrder ? 'updated' : 'created'}.`
+      `Order for ${order.customerName} has been ${
+        editingOrder ? 'updated' : 'created'
+      }.`
     );
   };
 
@@ -81,7 +83,7 @@ const Orders = () => {
       title: 'Order ID',
       dataIndex: 'id',
       key: 'id',
-      render: (id: string) => <strong>#{id.slice(-5)}</strong>,
+      render: (id: string | number) => <strong>#{String(id).slice(-5)}</strong>,
     },
     {
       title: 'Customer',
@@ -92,7 +94,7 @@ const Orders = () => {
       title: 'Table',
       dataIndex: 'tableNumber',
       key: 'tableNumber',
-      render: (text: string) => (text ? `Table ${text}` : 'Takeaway'),
+      render: (text: string | number) => (text ? `Table ${text}` : 'Takeaway'),
     },
     {
       title: 'Total',
@@ -140,7 +142,11 @@ const Orders = () => {
       key: 'actions',
       render: (_, order) => (
         <Space>
-          <Button size="small" type="link" onClick={() => handleEdit(order, true)}>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => handleEdit(order, true)}
+          >
             View
           </Button>
           <Popconfirm
@@ -162,10 +168,18 @@ const Orders = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div>
           <Typography.Title level={3}>Orders</Typography.Title>
-          <Typography.Text type="secondary">Manage customer orders.</Typography.Text>
+          <Typography.Text type="secondary">
+            Manage customer orders.
+          </Typography.Text>
         </div>
         <Space>
           <Button
@@ -199,7 +213,11 @@ const Orders = () => {
       />
 
       <Modal
-        title={editingOrder ? `Order #${editingOrder.id.slice(-5)}` : 'New Order'}
+        title={
+          editingOrder
+            ? `Order #${String(editingOrder.id).slice(-5)}`
+            : 'New Order'
+        }
         open={isOpen}
         onCancel={() => {
           setIsOpen(false);
@@ -210,23 +228,71 @@ const Orders = () => {
         width={700}
       >
         {editingOrder && isViewingOnly ? (
-          <OrderDetails order={editingOrder} />
+          <OrderDetails order={{
+            ...editingOrder,
+            updated_at: (editingOrder as any).updated_at ?? (editingOrder as any).updatedAt ?? editingOrder.createdAt ?? '',
+            customer_id: (editingOrder as any).customer_id ?? '',
+            table_id: (editingOrder as any).table_id ?? '',
+            guest_count: (editingOrder as any).guest_count ?? 1,
+            order_type: (editingOrder as any).order_type ?? 'dine-in',
+            payment_method: (editingOrder as any).payment_method ?? 'cash',
+            note: (editingOrder as any).note ?? editingOrder.notes ?? '',
+            created_at: (editingOrder as any).created_at ?? editingOrder.createdAt ?? '',
+            status: (() => {
+              switch (editingOrder.status) {
+                case 'ready':
+                  return 'served';
+                case 'delivered':
+                  return 'completed';
+                case 'canceled':
+                  return 'cancelled';
+                default:
+                  return editingOrder.status;
+              }
+            })(),
+            id: Number(editingOrder.id),
+            customer: {
+              id: (editingOrder as any).customer_id ?? 0,
+              user_info: {
+                name: editingOrder.customerName,
+                avatar: null,
+              },
+            },
+            // Add missing OrderResponse fields with fallback values
+            order_date: (editingOrder as any).order_date ?? (editingOrder as any).created_at ?? editingOrder.createdAt ?? '',
+            total_amount: (editingOrder as any).total_amount ?? editingOrder.total ?? 0,
+            discount_amount: (editingOrder as any).discount_amount ?? 0,
+            final_amount: (editingOrder as any).final_amount ?? editingOrder.total ?? 0,
+            is_paid: (editingOrder as any).is_paid ?? false,
+          }} />
         ) : (
           <OrderForm
             initialData={
               editingOrder
                 ? {
                     ...editingOrder,
-                    status: editingOrder.status as any, // Cast to OrderStatus if compatible, or map if needed
+                    id: Number(editingOrder.id),
+                    status: (() => {
+                      switch (editingOrder.status) {
+                        case 'ready':
+                          return 'served';
+                        case 'delivered':
+                          return 'completed';
+                        case 'canceled':
+                          return 'cancelled';
+                        default:
+                          return editingOrder.status;
+                      }
+                    })(),
                   }
                 : undefined
             }
-            onSave={() => {
+            onSave={(order) => handleSave(order)}
+            onCancel={() => {
               setIsOpen(false);
               setEditingOrder(null);
               setIsViewingOnly(false);
             }}
-            onCancel={() => setIsOpen(false)}
           />
         )}
       </Modal>

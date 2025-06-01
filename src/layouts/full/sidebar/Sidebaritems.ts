@@ -1,3 +1,5 @@
+import { uniqueId } from "lodash";
+
 export interface ChildItem {
   id?: number | string;
   name?: string;
@@ -19,7 +21,6 @@ export interface MenuItem {
   url?: any;
 }
 
-import { uniqueId } from "lodash";
 const SidebarContent: MenuItem[] = [
   {
     heading: "TRANG CHỦ",
@@ -46,6 +47,12 @@ const SidebarContent: MenuItem[] = [
         icon: "solar:hamburger-menu-outline",
         id: uniqueId(),
         url: "/admin/menu-item",
+      },
+      {
+        name: "Quản lý bàn", // Bổ sung mục mới
+        icon: "solar:square-line-duotone", // Icon bàn
+        id: uniqueId(),
+        url: "/admin/table",
       },
       {
         name: "Đơn hàng",
