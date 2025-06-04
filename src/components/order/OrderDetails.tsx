@@ -1,19 +1,19 @@
 import { Typography, Divider } from 'antd';
-import { OrderResponse } from '../../types/Orderlist';
+import { OrderModel } from '../../types/order';
 
 type Props = {
-  order: OrderResponse;
+  order: OrderModel;
 };
 
 const OrderDetails = ({ order }: Props) => {
   return (
     <div>
       <Typography.Title level={4}>
-        Customer: {order.customer?.user_info.name || 'Unknown'}
+        Customer: {order.customer?.user_info?.name || 'Unknown'}
       </Typography.Title>
 
       <Typography.Text strong>Table: </Typography.Text>
-      {order.table ? `#${order.table.id}` : 'Takeaway'}
+      {order.table ? `#${order.table.table_number}` : 'Takeaway / Delivery'}
       <br />
 
       <Typography.Text strong>Created At: </Typography.Text>
@@ -36,9 +36,9 @@ const OrderDetails = ({ order }: Props) => {
       <Typography.Title level={5}>Items</Typography.Title>
       <ul>
         {order.order_items?.map((item) => (
-          <li key={item.id}>
-            {item.quantity} x {item.product?.name || 'Unknown'} – ${Number(item.price).toFixed(2)} = $
-            {(item.quantity * Number(item.price)).toFixed(2)}
+          <li key={item.order_item_id}>
+            {item.quantity} x {item.menu_item?.name || 'Unknown'} – ${Number(item.price ?? 0).toFixed(2)} = $
+            {(item.quantity * Number(item.price ?? 0)).toFixed(2)}
           </li>
         ))}
       </ul>
@@ -48,7 +48,7 @@ const OrderDetails = ({ order }: Props) => {
       $
       {order.order_items
         ? order.order_items
-            .reduce((sum, item) => sum + item.quantity * Number(item.price), 0)
+            .reduce((sum, item) => sum + item.quantity * Number(item.price ?? 0), 0)
             .toFixed(2)
         : '0.00'}
     </div>

@@ -1,118 +1,149 @@
-export interface User {
-  id: string;
-  name: string;
+export type OrderStatus =
+  | 'pending'
+  | 'preparing'
+  | 'served'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded';
+
+export type OrderType = 'dine-in' | 'take-away' | 'delivery';
+export type TableStatus = 'available' | 'occupied' | 'reserved' | 'unavailable';
+export type VoucherType = 'flat' | 'percent';
+
+// Account info nested in user_info
+export interface AccountModel {
   email: string;
-  phone: string;
-  createdAt: Date;
-  orders: number;
-  totalSpent: number;
 }
 
-export interface Category {
-  id: string;
+export interface UserInfoModel {
+  user_id: number;
+  account_id: number;
   name: string;
-  description: string;
-  itemCount: number;
-}
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  categoryId: string;
-  categoryName: string;
-  image: string;
-  available: boolean;
-  stock: number; // Added stock property
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  position: string;
+  username: string;
   email: string;
-  phone: string;
-  startDate: Date;
+  phone?: string;
+  address?: string;
+  avatar?: string;
+  role?: string;
+  created_at?: string;
+  updated_at?: string;
+  account?: AccountModel;
 }
 
-export interface Stats {
-  totalRevenue: number;
-  ordersToday: number;
-  newCustomers: number;
-  popularDishes: { name: string; count: number }[];
+export interface CustomerModel {
+  customer_id: number;
+  user_id: number;
+  loyalty_point: number;
+  total_spent: number;
+  membership_level: string;
+  created_at?: string;
+  updated_at?: string;
+  user_info?: UserInfoModel;
+  vip_id?: number;
 }
 
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  time: Date;
-  read: boolean;
-  type: "order" | "user" | "system";
+export interface TableModel {
+  table_id: number;
+  table_number: string;
+  status: TableStatus;
+  seat_count: number;
+  floor?: number;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface MonthlyRevenue {
-  id: string;
-  month: string;
-  year: number;
-  revenue: number;
-  expenses: number;
-  profit: number;
-  topSellingItems: { name: string; revenue: number }[];
+export interface VoucherModel {
+  voucher_id: number;
+  code: string;
+  type: VoucherType;
+  value: number;
+  usage_limit?: number | null;
+  usage_limit_per_user?: number | null;
+  expires_at?: string | null;
+  is_active: boolean;
 }
 
-export interface InventoryItem {
-  id: string;
+export interface MenuItemModel {
+  item_id: number;
   name: string;
-  category: string;
-  stock: number;
-  unitPrice: number;
-  totalValue: number;
-  lastRestocked: Date;
-  minimumStock: number;
-  supplier: string;
+  price: string;
+  image_url?: string;
+  discount_percent?: string;
+  is_available: boolean;
+  is_combo: boolean;
+  category_id: number;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface Order {
-  id: string;
-  customerName: string;
-  items: OrderItem[];
-  total: number;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'canceled';
-  createdAt: Date;
-  tableNumber?: string;
-  notes?: string;
-}
-
-export interface OrderItem {
-  id: string;
-  menuItemId: string;
-  name: string;
-  price: number;
+export interface OrderItemModel {
+  order_item_id: number;
+  order_id: number;
+  item_id: number;
   quantity: number;
-  subtotal: number;
+  price: number | null;
+  total?: number;
+  menu_item?: MenuItemModel;
 }
 
-// New interface for comments
-export interface Comment {
-  id: string;
-  menuItemId: string;
-  menuItemName: string;
-  userName: string;
-  rating: number;
-  content: string;
-  createdAt: Date;
+export interface OrderModel {
+  id: number;
+  customer_id?: number | null;
+  table_id?: number | null;
+  voucher_id?: number | null;
+  guest_count?: number | null;
+  order_type: OrderType;
+  order_date: string;
+  total_amount: number;
+  discount_amount: string;
+  vip_discount_percent?: number;
+  shipping_fee?: string;
+  free_shipping_applied: boolean;
+  final_amount: string;
+  status: OrderStatus;
+  payment_method?: string | null;
+  is_paid: boolean;
+  note?: string | null;
+  created_at: string;
+  updated_at: string;
+
+  customer?: CustomerModel;
+  table?: TableModel;
+  voucher?: VoucherModel;
+  order_items?: OrderItemModel[];
 }
 
-// New interface for employee work schedule
-export interface WorkSchedule {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  date: Date;
-  hoursWorked: number;
-  hourlyRate: number;
-  totalPay: number;
-  notes?: string;
+export interface OrderCreateRequest {
+  customer_id?: number | null;
+  table_id?: number | null;
+  voucher_id?: number | null;
+  guest_count?: number | null;
+  order_type: OrderType;
+
+order_items: {
+  item_id: number; // ✅ Đổi từ product_id -> item_id
+  quantity: number;
+}[]
+
+  note?: string;
+  order_date?: string;
+  total_amount?: number;
+  discount_amount?: number;
+  vip_discount_percent?: number;
+  shipping_fee?: number;
+  free_shipping_applied?: boolean;
+  final_amount?: number;
+  status?: OrderStatus;
+  payment_method?: 'cash' | 'atm' | string;
+  is_paid?: boolean;
+}
+
+export interface OrderUpdateRequest {
+  status?: OrderStatus;
+  is_paid?: boolean;
+  note?: string;
+  table_id?: number | null;
+  voucher_code?: string;
 }

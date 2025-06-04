@@ -34,7 +34,6 @@ const vipAPi = {
     });
   },
 
-  // Nếu backend KHÔNG có route này, cần thêm vào MembershipController + router
   getLevelForSpent(total_spent: number) {
     return axiosClient.get<VipLevel | null>(`${URL}/level-for-spent`, {
       params: { total_spent },

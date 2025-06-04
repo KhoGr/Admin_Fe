@@ -17,14 +17,14 @@ import {
 import { ColumnsType } from 'antd/es/table';
 import OrderForm from '../../components/order/OrderForm';
 import OrderDetails from '../../components/order/OrderDetails';
-import { Order } from '../../types/order';
+import { OrderModel } from '../../types/order';
 import { toast } from 'sonner';
 import orderApi from '../../api/orderApi';
 
 const Orders = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [editingOrder, setEditingOrder] = useState<OrderModel | null>(null);
+  const [orders, setOrders] = useState<OrderModel[]>([]);
   const [searchText, setSearchText] = useState('');
   const [isViewingOnly, setIsViewingOnly] = useState(false);
 
@@ -32,16 +32,12 @@ const Orders = () => {
     orderApi
       .getAll()
       .then((orderModels) => {
-        const mappedOrders: Order[] = orderModels.map((o: any) => ({
-          id: o.id,
-          customerName: o.customerName,
-          tableNumber: o.tableNumber,
-          total: o.total,
-          items: o.items,
-          createdAt: o.createdAt,
-          status: o.status,
-        }));
-        setOrders(mappedOrders);
+        if (Array.isArray(orderModels)) {
+          setOrders(orderModels);
+        } else {
+          console.error('Unexpected response format:', orderModels);
+          setOrders([]); // fallback an toàn
+        }
       })
       .catch(() => toast.error('Failed to load orders'));
   }, []);
@@ -56,13 +52,13 @@ const Orders = () => {
     }
   };
 
-  const handleEdit = (order: Order, viewOnly = false) => {
+  const handleEdit = (order: OrderModel, viewOnly = false) => {
     setEditingOrder(order);
     setIsViewingOnly(viewOnly);
     setIsOpen(true);
   };
 
-  const handleSave = (order: Order) => {
+  const handleSave = (order: OrderModel) => {
     const updatedOrders = editingOrder
       ? orders.map((o) => (o.id === order.id ? order : o))
       : [order, ...orders];
@@ -71,14 +67,10 @@ const Orders = () => {
     setIsOpen(false);
     setEditingOrder(null);
     setIsViewingOnly(false);
-    toast.success(
-      `Order for ${order.customerName} has been ${
-        editingOrder ? 'updated' : 'created'
-      }.`
-    );
+    toast.success(`Order #${String(order.id).slice(-5)} has been ${editingOrder ? 'updated' : 'created'}.`);
   };
 
-  const columns: ColumnsType<Order> = [
+  const columns: ColumnsType<OrderModel> = [
     {
       title: 'Order ID',
       dataIndex: 'id',
@@ -87,54 +79,49 @@ const Orders = () => {
     },
     {
       title: 'Customer',
-      dataIndex: 'customerName',
-      key: 'customerName',
+      key: 'customer',
+      render: (_, order) => order.customer?.user_info?.name || 'Guest',
+    },
+    {
+      title: 'VIP',
+      key: 'vip_level',
+      render: (_, order) => order.customer?.vip_id || 'N/A',
     },
     {
       title: 'Table',
-      dataIndex: 'tableNumber',
-      key: 'tableNumber',
-      render: (text: string | number) => (text ? `Table ${text}` : 'Takeaway'),
+      key: 'table',
+      render: (_, order) => order.table ? `Table ${order.table.table_number}` : 'Takeaway',
     },
     {
       title: 'Total',
-      dataIndex: 'total',
-      key: 'total',
-      render: (total: number) => `$${total.toFixed(2)}`,
+      key: 'total_amount',
+      render: (_, order) => `$${Number(order.total_amount || 0).toFixed(2)}`,
     },
     {
       title: 'Items',
-      dataIndex: 'items',
       key: 'items',
-      render: (items) => `${items.length} items`,
+      render: (_, order) => `${order.order_items?.length || 0} items`,
     },
     {
       title: 'Time',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date: string) => new Date(date).toLocaleTimeString(),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: Order['status']) => {
-        const statusColors: Record<
-          Order['status'],
-          'default' | 'processing' | 'success' | 'error' | 'warning'
-        > = {
+      render: (status: OrderModel['status']) => {
+        const statusColors: Record<OrderModel['status'], "default" | "error" | "warning" | "processing" | "success"> = {
           pending: 'warning',
           preparing: 'processing',
-          ready: 'default',
-          delivered: 'success',
-          canceled: 'error',
+          served: 'default',
+          completed: 'success',
+          cancelled: 'error',
+          refunded: 'default',
         };
-        return (
-          <Badge
-            status={statusColors[status]}
-            text={status.charAt(0).toUpperCase() + status.slice(1)}
-          />
-        );
+        return <Badge status={statusColors[status]} text={status.charAt(0).toUpperCase() + status.slice(1)} />;
       },
     },
     {
@@ -142,11 +129,7 @@ const Orders = () => {
       key: 'actions',
       render: (_, order) => (
         <Space>
-          <Button
-            size="small"
-            type="link"
-            onClick={() => handleEdit(order, true)}
-          >
+          <Button size="small" type="link" onClick={() => handleEdit(order, true)}>
             View
           </Button>
           <Popconfirm
@@ -163,23 +146,15 @@ const Orders = () => {
   ];
 
   const filteredOrders = orders.filter((order) =>
-    order.customerName.toLowerCase().includes(searchText.toLowerCase())
+    order.customer?.user_info?.name?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <Typography.Title level={3}>Orders</Typography.Title>
-          <Typography.Text type="secondary">
-            Manage customer orders.
-          </Typography.Text>
+          <Typography.Text type="secondary">Manage customer orders.</Typography.Text>
         </div>
         <Space>
           <Button
@@ -213,11 +188,7 @@ const Orders = () => {
       />
 
       <Modal
-        title={
-          editingOrder
-            ? `Order #${String(editingOrder.id).slice(-5)}`
-            : 'New Order'
-        }
+        title={editingOrder ? `Order #${String(editingOrder.id).slice(-5)}` : 'New Order'}
         open={isOpen}
         onCancel={() => {
           setIsOpen(false);
@@ -228,66 +199,11 @@ const Orders = () => {
         width={700}
       >
         {editingOrder && isViewingOnly ? (
-          <OrderDetails order={{
-            ...editingOrder,
-            updated_at: (editingOrder as any).updated_at ?? (editingOrder as any).updatedAt ?? editingOrder.createdAt ?? '',
-            customer_id: (editingOrder as any).customer_id ?? '',
-            table_id: (editingOrder as any).table_id ?? '',
-            guest_count: (editingOrder as any).guest_count ?? 1,
-            order_type: (editingOrder as any).order_type ?? 'dine-in',
-            payment_method: (editingOrder as any).payment_method ?? 'cash',
-            note: (editingOrder as any).note ?? editingOrder.notes ?? '',
-            created_at: (editingOrder as any).created_at ?? editingOrder.createdAt ?? '',
-            status: (() => {
-              switch (editingOrder.status) {
-                case 'ready':
-                  return 'served';
-                case 'delivered':
-                  return 'completed';
-                case 'canceled':
-                  return 'cancelled';
-                default:
-                  return editingOrder.status;
-              }
-            })(),
-            id: Number(editingOrder.id),
-            customer: {
-              id: (editingOrder as any).customer_id ?? 0,
-              user_info: {
-                name: editingOrder.customerName,
-                avatar: null,
-              },
-            },
-            // Add missing OrderResponse fields with fallback values
-            order_date: (editingOrder as any).order_date ?? (editingOrder as any).created_at ?? editingOrder.createdAt ?? '',
-            total_amount: (editingOrder as any).total_amount ?? editingOrder.total ?? 0,
-            discount_amount: (editingOrder as any).discount_amount ?? 0,
-            final_amount: (editingOrder as any).final_amount ?? editingOrder.total ?? 0,
-            is_paid: (editingOrder as any).is_paid ?? false,
-          }} />
+          <OrderDetails order={editingOrder} />
         ) : (
           <OrderForm
-            initialData={
-              editingOrder
-                ? {
-                    ...editingOrder,
-                    id: Number(editingOrder.id),
-                    status: (() => {
-                      switch (editingOrder.status) {
-                        case 'ready':
-                          return 'served';
-                        case 'delivered':
-                          return 'completed';
-                        case 'canceled':
-                          return 'cancelled';
-                        default:
-                          return editingOrder.status;
-                      }
-                    })(),
-                  }
-                : undefined
-            }
-            onSave={(order) => handleSave(order)}
+            initialData={editingOrder ?? undefined}
+            onSave={handleSave}
             onCancel={() => {
               setIsOpen(false);
               setEditingOrder(null);

@@ -59,16 +59,28 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ customers, onDetail, onRe
       title: 'Tổng chi tiêu',
       dataIndex: 'total_spent',
       key: 'total_spent',
-      render: (value: number) =>
-        Math.min(value, 9999999999).toLocaleString('vi-VN', {
+      render: (value: number | string | null) => {
+        const num = typeof value === 'string' ? parseFloat(value) : value;
+        if (!num || isNaN(num)) return '—';
+        return Math.min(num, 9999999999).toLocaleString('vi-VN', {
           style: 'currency',
           currency: 'VND',
-        }),
+          maximumFractionDigits: 0, // Ẩn phần thập phân
+        });
+      },
     },
     {
       title: 'Hạng',
       dataIndex: 'membership_level',
       key: 'membership_level',
+      render: (level: string) =>
+        level ? level.charAt(0).toUpperCase() + level.slice(1) : '—',
+    },
+    {
+      title: 'VIP',
+      dataIndex: ['vip_level', 'name'],
+      key: 'vip_name',
+      render: (name: string) => name || '—',
     },
     {
       title: 'Ghi chú',

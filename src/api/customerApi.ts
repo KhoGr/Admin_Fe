@@ -26,7 +26,7 @@ const customerApi = {
 searchByName(name: string): Promise<CustomerModel[]> {
   return axiosClient.get(`${URL}/search`, {
     params: { name },
-  }).then(res => res.data); // chỉ lấy res.data là mảng khách hàng
+  }).then(res => res.data);
 }
 };
 

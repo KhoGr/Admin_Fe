@@ -10,26 +10,23 @@ import {
   message,
   Select,
   Tag,
-  DatePicker,
-  TimePicker,
+  Checkbox,
 } from 'antd';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import debounce from 'lodash/debounce';
 import orderApi from '../../api/orderApi';
 import tableApi from '../../api/tableApi';
 import customerApi from '../../api/customerApi';
-import { OrderResponse, CreateOrderPayload } from '../../types/Orderlist';
+import { OrderModel, OrderCreateRequest } from '../../types/order';
 import { CustomerModel } from '../../types/Customer';
-import { Table as TableModel } from '../../types/table';
+import { Table } from '../../types/table';
 import TableSelectModal from './grpc/TableSelector';
 import OrderItemFields from './grpc/OrderItemFields';
-
-import dayjs from 'dayjs';
+import VoucherSelector from './grpc/VoucherSelector';
 
 const { Option } = Select;
 
 type Props = {
-  initialData?: Partial<OrderResponse>;
+  initialData?: Partial<OrderModel>;
   onSave: (order: any) => void;
   onCancel: () => void;
 };
@@ -38,17 +35,21 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
   const [form] = Form.useForm();
   const [customers, setCustomers] = useState<CustomerModel[]>([]);
   const [fetchingCustomers, setFetchingCustomers] = useState(false);
-  const [tables, setTables] = useState<TableModel[]>([]);
-  const [selectedTables, setSelectedTables] = useState<TableModel[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [selectedTables, setSelectedTables] = useState<Table[]>([]);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [voucherData, setVoucherData] = useState<{
+    voucher_id: number;
+    discount_amount: number;
+    type: 'percent' | 'flat';
+  } | null>(null);
 
-  const fetchCustomers = async (search = '') => {
+  const fetchCustomers = async () => {
     setFetchingCustomers(true);
     try {
       const res = await customerApi.getAll();
       setCustomers(res.data || []);
-    } catch (err) {
-      console.error('Lỗi khi tìm khách hàng:', err);
+    } catch {
       message.error('Không thể tải danh sách khách hàng');
     } finally {
       setFetchingCustomers(false);
@@ -59,8 +60,8 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
     try {
       const res = await tableApi.getAll();
       setTables(res || []);
-    } catch (err) {
-      console.error('Lỗi khi lấy danh sách bàn:', err);
+    } catch {
+      message.error('Lỗi khi lấy danh sách bàn');
     }
   };
 
@@ -69,74 +70,97 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
   const orderType = Form.useWatch('order_type', form);
 
   useEffect(() => {
-    if (initialData?.customer?.id) {
-      form.setFieldsValue({
-        customerId: String(initialData.customer.id),
-      });
-      fetchCustomers();
-    }
-
     if (initialData) {
       form.setFieldsValue({
-        order_type: initialData.table ? 'dine-in' : 'take-away',
-        notes: initialData.note,
+        customer_id: String(initialData.customer_id),
+        order_type: initialData.order_type,
+        note: initialData.note,
         guest_count: initialData.guest_count,
         items:
           initialData.order_items?.map((item) => ({
-            product_id: item.product_id,
-            name: item.product?.name || '',
+            item_id: item.item_id,
             quantity: item.quantity,
             price: Number(item.price),
           })) || [],
+        status: initialData.status || 'pending',
+        payment_method: initialData.payment_method || 'cash',
+        is_paid: initialData.is_paid ?? false,
       });
 
+      if (initialData.customer_id) {
+        fetchCustomers();
+      }
+
       if (initialData.table) {
-        const table = {
-          ...initialData.table,
-          table_id: initialData.table.id,
-          table_number: (initialData.table as any).table_number,
-          status: (initialData.table as any).status,
-          seat_count: (initialData.table as any).seat_count,
-        } as TableModel;
-        setSelectedTables([table]);
+        setSelectedTables([
+          {
+            table_id: initialData.table.table_id,
+            table_number: initialData.table.table_number,
+            status: initialData.table.status,
+            seat_count: initialData.table.seat_count,
+            floor: initialData.table.floor,
+          },
+        ]);
+      }
+
+      if (initialData.voucher_id && initialData.discount_amount) {
+        setVoucherData({
+          voucher_id: initialData.voucher_id,
+          discount_amount: Number(initialData.discount_amount),
+          type: 'flat', // update this if you track type in data
+        });
       }
     }
-  }, [initialData, form]);
+  }, [initialData]);
 
   const handleFinish = async (values: any) => {
-    let order_date: string | undefined = undefined;
-
-    if (orderType === 'reservation') {
-      const { reservation_date, reservation_time } = values;
-      order_date = dayjs(reservation_date)
-        .hour(dayjs(reservation_time).hour())
-        .minute(dayjs(reservation_time).minute())
-        .second(0)
-        .toISOString();
+    const totalSeats = selectedTables.reduce((sum, t) => sum + (t.seat_count || 0), 0);
+    if (values.order_type === 'dine-in' && values.guest_count && totalSeats < values.guest_count) {
+      message.error(`Tổng số ghế (${totalSeats}) không đủ cho ${values.guest_count} khách.`);
+      return;
     }
 
-    const order_items = (values.items || []).map((item: any) => ({
-      product_id: item.product_id || 0,
+    const orderItems = (values.items || []).map((item: any) => ({
+      item_id: item.item_id,
       quantity: item.quantity,
       price: item.price,
     }));
 
-    const totalSeats = selectedTables.reduce((sum, t) => sum + t.seat_count, 0);
-    if (orderType === 'dine-in' && guestCount && totalSeats < guestCount) {
-      message.error(`Tổng số ghế (${totalSeats}) không đủ cho ${guestCount} khách.`);
-      return;
+    const totalAmount = orderItems.reduce(
+      (sum: number, item: any) => sum + item.price * item.quantity,
+      0
+    );
+
+    let finalAmount = totalAmount;
+    if (voucherData) {
+      if (voucherData.type === 'percent') {
+        finalAmount = totalAmount * (1 - voucherData.discount_amount / 100);
+      } else {
+        finalAmount = totalAmount - voucherData.discount_amount;
+      }
+      if (finalAmount < 0) finalAmount = 0;
     }
 
-    const payload: CreateOrderPayload = {
-      customer_id: parseInt(values.customerId),
-      table_id: (orderType === 'dine-in' || orderType === 'reservation') && selectedTables.length > 0
-        ? selectedTables[0].table_id
-        : undefined,
+    const payload: OrderCreateRequest = {
+      customer_id: parseInt(values.customer_id),
+      table_id:
+        values.order_type === 'dine-in' && selectedTables.length > 0
+          ? selectedTables[0].table_id
+          : undefined,
       order_type: values.order_type,
-      note: values.notes,
-      guest_count: (orderType === 'dine-in' || orderType === 'reservation') ? guestCount : undefined,
-      order_items,
-      order_date: order_date ?? '',
+      guest_count: values.order_type === 'dine-in' ? values.guest_count : undefined,
+      note: values.note,
+      order_items: orderItems.map((i: { item_id: number; quantity: number }) => ({
+        item_id: i.item_id,
+        quantity: i.quantity,
+      })),
+      final_amount: finalAmount,
+      status: values.status,
+      payment_method: values.payment_method,
+      is_paid: values.is_paid,
+      ...(voucherData
+        ? { voucher_id: voucherData.voucher_id, discount_amount: voucherData.discount_amount }
+        : {}),
     };
 
     try {
@@ -145,28 +169,35 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
       onSave(createdOrder);
       form.resetFields();
     } catch (err) {
-      console.error('Tạo đơn hàng thất bại:', err);
+      console.error(err);
       message.error('Tạo đơn hàng thất bại');
     }
   };
 
-  const handleSelectTable = (tables: TableModel[]) => {
+  const handleSelectTable = (tables: Table[]) => {
     setSelectedTables(tables);
     setIsTableModalOpen(false);
   };
 
-  const handleOpenTableModal = async () => {
-    await fetchTables();
-    setIsTableModalOpen(true);
-  };
-
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish}>
-      <Typography.Title level={4}>{initialData ? 'Edit Order' : 'New Order'}</Typography.Title>
+    <Form
+      layout="vertical"
+      form={form}
+      onFinish={handleFinish}
+      initialValues={{
+        order_type: 'dine-in',
+        status: 'pending',
+        payment_method: 'cash',
+        is_paid: false,
+      }}
+    >
+      <Typography.Title level={4}>
+        {initialData ? 'Chỉnh sửa đơn hàng' : 'Tạo đơn hàng'}
+      </Typography.Title>
 
       <Form.Item
-        label="Customer"
-        name="customerId"
+        label="Khách hàng"
+        name="customer_id"
         rules={[{ required: true, message: 'Vui lòng chọn khách hàng' }]}
       >
         <Select
@@ -174,9 +205,8 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
           placeholder="Tìm khách hàng"
           filterOption={false}
           onSearch={debouncedFetchCustomers}
-          onFocus={() => fetchCustomers()}
+          onFocus={fetchCustomers}
           loading={fetchingCustomers}
-          notFoundContent={fetchingCustomers ? 'Đang tải...' : 'Không có kết quả'}
         >
           {customers.map((c) => (
             <Option key={c.customer_id} value={String(c.customer_id)}>
@@ -187,80 +217,110 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
       </Form.Item>
 
       <Form.Item
-        label="Order Type"
+        label="Loại đơn hàng"
         name="order_type"
         rules={[{ required: true, message: 'Vui lòng chọn loại đơn hàng' }]}
       >
         <Select placeholder="Chọn loại đơn hàng">
           <Option value="dine-in">Dùng tại chỗ</Option>
-          <Option value="reservation">Đặt bàn trước</Option>
           <Option value="take-away">Mang đi</Option>
           <Option value="delivery">Giao hàng</Option>
         </Select>
       </Form.Item>
 
-      {(orderType === 'dine-in' || orderType === 'reservation') && (
-        <Form.Item
-          label="Guest Count"
-          name="guest_count"
-          rules={[{ required: true, message: 'Vui lòng nhập số khách' }]}
-        >
-          <InputNumber min={1} placeholder="Số lượng khách" />
-        </Form.Item>
-      )}
-
-      {(orderType === 'dine-in' || orderType === 'reservation') && (
-        <Form.Item label="Table">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <Button type="dashed" onClick={handleOpenTableModal}>
-              Chọn bàn
-            </Button>
-            {selectedTables.map((t) => (
-              <Tag key={t.table_id} color="green" style={{ marginBottom: 8 }}>
-                Bàn {t.table_number} - Tầng {t.floor} ({t.seat_count} ghế)
-              </Tag>
-            ))}
-          </div>
-        </Form.Item>
-      )}
-
-      {orderType === 'reservation' && (
+      {orderType === 'dine-in' && (
         <>
           <Form.Item
-            label="Ngày đặt"
-            name="reservation_date"
-            rules={[{ required: true, message: 'Chọn ngày đặt bàn' }]}
+            label="Số khách"
+            name="guest_count"
+            rules={[{ required: true, message: 'Vui lòng nhập số khách' }]}
           >
-            <DatePicker format="YYYY-MM-DD" />
+            <InputNumber min={1} />
           </Form.Item>
 
-          <Form.Item
-            label="Giờ đặt"
-            name="reservation_time"
-            rules={[{ required: true, message: 'Chọn giờ đặt bàn' }]}
-          >
-            <TimePicker format="HH:mm" />
+          <Form.Item label="Bàn đã chọn">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <Button
+                type="dashed"
+                onClick={() => {
+                  fetchTables();
+                  setIsTableModalOpen(true);
+                }}
+              >
+                Chọn bàn
+              </Button>
+              {selectedTables.map((t) => (
+                <Tag key={t.table_id} color="green">
+                  {t.floor} - {t.table_number} ({t.seat_count} ghế)
+                </Tag>
+              ))}
+            </div>
           </Form.Item>
         </>
       )}
 
-      <Form.Item label="Notes" name="notes">
+      <Form.Item label="Ghi chú" name="note">
         <Input.TextArea rows={2} />
       </Form.Item>
 
       <Divider />
-      <Typography.Title level={5}>Items</Typography.Title>
-            <OrderItemFields form={form} />
-
-
-
+      <Typography.Title level={5}>Danh sách món</Typography.Title>
+      <OrderItemFields form={form} />
 
       <Divider />
+      <Typography.Title level={5}>Voucher</Typography.Title>
+      <VoucherSelector
+        form={form}
+        onChange={(value) => {
+          if (value) {
+            setVoucherData({
+              ...value,
+              type: 'flat', // hoặc lấy dynamic nếu có trong value
+            });
+          } else {
+            setVoucherData(null);
+          }
+        }}
+      />
+
+      <Divider />
+      <Typography.Title level={5}>Thông tin thanh toán</Typography.Title>
+
+      <Form.Item
+        label="Trạng thái đơn hàng"
+        name="status"
+        rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
+      >
+        <Select placeholder="Chọn trạng thái">
+          <Option value="pending">Chờ xác nhận</Option>
+          <Option value="preparing">Đang chuẩn bị</Option>
+          <Option value="served">Đã phục vụ</Option>
+          <Option value="completed">Hoàn tất</Option>
+          <Option value="cancelled">Đã hủy</Option>
+          <Option value="refunded">Hoàn tiền</Option>
+        </Select>
+      </Form.Item>
+
+      <Form.Item
+        label="Phương thức thanh toán"
+        name="payment_method"
+        rules={[{ required: true, message: 'Vui lòng chọn phương thức thanh toán' }]}
+      >
+        <Select placeholder="Chọn phương thức">
+          <Option value="cash">Tiền mặt</Option>
+          <Option value="atm">Thẻ ATM</Option>
+        </Select>
+      </Form.Item>
+
+      <Form.Item name="is_paid" valuePropName="checked">
+        <Checkbox>Đã thanh toán</Checkbox>
+      </Form.Item>
+
       <Form.Item>
         <Space>
-          <Button onClick={onCancel}>Cancel</Button>
+          <Button onClick={onCancel}>Hủy</Button>
           <Button type="primary" htmlType="submit">
-            Save Order
+            Lưu đơn hàng
           </Button>
         </Space>
       </Form.Item>

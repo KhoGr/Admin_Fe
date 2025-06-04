@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Typography, Input, Button, Modal, Form, Select, Space, Row, Col } from 'antd';
+import {
+  Typography,
+  Input,
+  Button,
+  Modal,
+  Form,
+  Space,
+  Row,
+  Col,
+  InputNumber,
+} from 'antd';
 import CustomerTable from '../../components/customer/CustomerTable';
 import { CustomerModel } from '../../types/Customer';
 import customerApi from '../../api/customerApi';
@@ -7,7 +17,6 @@ import { useDispatch } from 'react-redux';
 import { setMessage } from '../../redux/slices/message.slice';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 const CustomerPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -21,8 +30,6 @@ const CustomerPage: React.FC = () => {
   const fetchAllCustomers = async () => {
     try {
       const data = await customerApi.getAll();
-            console.log("data ",data)
-
       setCustomers(data.data);
     } catch (error) {
       dispatch(setMessage({ message: 'Không thể tải danh sách khách hàng', type: 'error' }));
@@ -54,8 +61,7 @@ const CustomerPage: React.FC = () => {
       username: customer.user_info?.username || '',
       email: customer.user_info?.account?.email || '',
       loyalty_point: customer.loyalty_point,
-      total_spent: customer.total_spent,
-      membership_level: customer.membership_level,
+      total_spent: Number(customer.total_spent) || 0,
       note: customer.note || '',
     });
 
@@ -128,27 +134,26 @@ const CustomerPage: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item label="Điểm tích lũy" name="loyalty_point">
-            <Input type="number" />
+            <InputNumber style={{ width: '100%' }} min={0} />
           </Form.Item>
-          <Form.Item label="Tổng chi tiêu" name="total_spent">
-            <Input type="number" addonAfter="₫" />
-          </Form.Item>
-          {form.getFieldValue('total_spent') !== undefined && (
+<Form.Item label="Tổng chi tiêu" name="total_spent">
+  <InputNumber
+    style={{ width: '100%' }}
+    min={0}
+    formatter={(value) =>
+      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ₫'
+    }
+  />
+</Form.Item>
+          {selectedCustomer?.membership_level && (
             <Text type="secondary">
-              {Number(form.getFieldValue('total_spent')).toLocaleString('vi-VN', {
-                style: 'currency',
-                currency: 'VND',
-              })}
+              Hạng hiện tại:{' '}
+              <b>
+                {selectedCustomer.membership_level.charAt(0).toUpperCase() +
+                  selectedCustomer.membership_level.slice(1)}
+              </b>
             </Text>
           )}
-          <Form.Item label="Hạng" name="membership_level">
-            <Select>
-              <Option value="bronze">Bronze</Option>
-              <Option value="silver">Silver</Option>
-              <Option value="gold">Gold</Option>
-              <Option value="platinum">Platinum</Option>
-            </Select>
-          </Form.Item>
           <Form.Item label="Ghi chú" name="note">
             <Input.TextArea rows={3} />
           </Form.Item>
