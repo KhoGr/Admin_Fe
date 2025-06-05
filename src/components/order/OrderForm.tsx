@@ -12,18 +12,19 @@ import {
   Tag,
   Checkbox,
 } from 'antd';
-import debounce from 'lodash/debounce';
 import orderApi from '../../api/orderApi';
 import tableApi from '../../api/tableApi';
-import customerApi from '../../api/customerApi';
 import { OrderModel, OrderCreateRequest } from '../../types/order';
-import { CustomerModel } from '../../types/Customer';
 import { Table } from '../../types/table';
 import TableSelectModal from './grpc/TableSelector';
 import OrderItemFields from './grpc/OrderItemFields';
 import VoucherSelector from './grpc/VoucherSelector';
+import CustomerSelect from './grpc/CustomerSelect'; // ⬅️ Đã tách riêng
+import io from 'socket.io-client';
+
 
 const { Option } = Select;
+const socket = io('http://localhost:4000');
 
 type Props = {
   initialData?: Partial<OrderModel>;
@@ -33,8 +34,6 @@ type Props = {
 
 const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
   const [form] = Form.useForm();
-  const [customers, setCustomers] = useState<CustomerModel[]>([]);
-  const [fetchingCustomers, setFetchingCustomers] = useState(false);
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedTables, setSelectedTables] = useState<Table[]>([]);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -43,18 +42,6 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
     discount_amount: number;
     type: 'percent' | 'flat';
   } | null>(null);
-
-  const fetchCustomers = async () => {
-    setFetchingCustomers(true);
-    try {
-      const res = await customerApi.getAll();
-      setCustomers(res.data || []);
-    } catch {
-      message.error('Không thể tải danh sách khách hàng');
-    } finally {
-      setFetchingCustomers(false);
-    }
-  };
 
   const fetchTables = async () => {
     try {
@@ -65,114 +52,140 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
     }
   };
 
-  const debouncedFetchCustomers = useCallback(debounce(fetchCustomers, 500), []);
   const guestCount = Number(Form.useWatch('guest_count', form));
   const orderType = Form.useWatch('order_type', form);
 
-  useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue({
-        customer_id: String(initialData.customer_id),
-        order_type: initialData.order_type,
-        note: initialData.note,
-        guest_count: initialData.guest_count,
-        items:
-          initialData.order_items?.map((item) => ({
-            item_id: item.item_id,
-            quantity: item.quantity,
-            price: Number(item.price),
-          })) || [],
-        status: initialData.status || 'pending',
-        payment_method: initialData.payment_method || 'cash',
-        is_paid: initialData.is_paid ?? false,
-      });
+useEffect(() => {
+  if (initialData) {
+const mappedItems =
+  initialData.order_items?.map((item) => ({
+    item_id: {
+      value: item.item_id,
+      label: item.menu_item?.name || '',
+    },
+    quantity: item.quantity,
+    price: Number(item.menu_item?.price),
+  })) || [];
 
-      if (initialData.customer_id) {
-        fetchCustomers();
-      }
-
-      if (initialData.table) {
-        setSelectedTables([
-          {
-            table_id: initialData.table.table_id,
-            table_number: initialData.table.table_number,
-            status: initialData.table.status,
-            seat_count: initialData.table.seat_count,
-            floor: initialData.table.floor,
-          },
-        ]);
-      }
-
-      if (initialData.voucher_id && initialData.discount_amount) {
-        setVoucherData({
-          voucher_id: initialData.voucher_id,
-          discount_amount: Number(initialData.discount_amount),
-          type: 'flat', // update this if you track type in data
-        });
-      }
-    }
-  }, [initialData]);
-
-  const handleFinish = async (values: any) => {
-    const totalSeats = selectedTables.reduce((sum, t) => sum + (t.seat_count || 0), 0);
-    if (values.order_type === 'dine-in' && values.guest_count && totalSeats < values.guest_count) {
-      message.error(`Tổng số ghế (${totalSeats}) không đủ cho ${values.guest_count} khách.`);
-      return;
-    }
-
-    const orderItems = (values.items || []).map((item: any) => ({
-      item_id: item.item_id,
-      quantity: item.quantity,
-      price: item.price,
-    }));
-
-    const totalAmount = orderItems.reduce(
-      (sum: number, item: any) => sum + item.price * item.quantity,
+    const totalAmount = mappedItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
       0
     );
 
-    let finalAmount = totalAmount;
-    if (voucherData) {
-      if (voucherData.type === 'percent') {
-        finalAmount = totalAmount * (1 - voucherData.discount_amount / 100);
-      } else {
-        finalAmount = totalAmount - voucherData.discount_amount;
-      }
-      if (finalAmount < 0) finalAmount = 0;
+    console.log('🧾 Initial Order Items:', mappedItems);
+    console.log('💰 Initial Total Amount:', totalAmount);
+
+    form.setFieldsValue({
+      customer_id: String(initialData.customer_id),
+      order_type: initialData.order_type,
+      note: initialData.note,
+      guest_count: initialData.guest_count,
+      items: mappedItems,
+      status: initialData.status || 'pending',
+      payment_method: initialData.payment_method || 'cash',
+      is_paid: initialData.is_paid ?? false,
+    });
+
+    if (initialData.table) {
+      setSelectedTables([
+        {
+          table_id: initialData.table.table_id,
+          table_number: initialData.table.table_number,
+          status: initialData.table.status,
+          seat_count: initialData.table.seat_count,
+          floor: initialData.table.floor,
+        },
+      ]);
     }
 
-    const payload: OrderCreateRequest = {
-      customer_id: parseInt(values.customer_id),
-      table_id:
-        values.order_type === 'dine-in' && selectedTables.length > 0
-          ? selectedTables[0].table_id
-          : undefined,
-      order_type: values.order_type,
-      guest_count: values.order_type === 'dine-in' ? values.guest_count : undefined,
-      note: values.note,
-      order_items: orderItems.map((i: { item_id: number; quantity: number }) => ({
-        item_id: i.item_id,
-        quantity: i.quantity,
-      })),
-      final_amount: finalAmount,
-      status: values.status,
-      payment_method: values.payment_method,
-      is_paid: values.is_paid,
-      ...(voucherData
-        ? { voucher_id: voucherData.voucher_id, discount_amount: voucherData.discount_amount }
-        : {}),
-    };
-
-    try {
-      const createdOrder = await orderApi.create(payload);
-      message.success('Đơn hàng đã được tạo');
-      onSave(createdOrder);
-      form.resetFields();
-    } catch (err) {
-      console.error(err);
-      message.error('Tạo đơn hàng thất bại');
+    if (initialData.voucher_id && initialData.discount_amount) {
+      const voucher: { voucher_id: number; discount_amount: number; type: 'flat' | 'percent' } = {
+        voucher_id: initialData.voucher_id,
+        discount_amount: Number(initialData.discount_amount),
+        type: 'flat',
+      };
+      setVoucherData(voucher);
+      console.log('🏷️ Initial Voucher:', voucher);
     }
+  }
+}, [initialData]);
+
+const handleFinish = async (values: any) => {
+  const totalSeats = selectedTables.reduce((sum, t) => sum + (t.seat_count || 0), 0);
+  if (values.order_type === 'dine-in' && values.guest_count && totalSeats < values.guest_count) {
+    message.error(`Tổng số ghế (${totalSeats}) không đủ cho ${values.guest_count} khách.`);
+    return;
+  }
+
+  const orderItems = (values.items || []).map((item: any) => ({
+    item_id: typeof item.item_id === 'object' ? item.item_id.value : item.item_id,
+    quantity: item.quantity,
+    price: item.price,
+  }));
+
+  const totalAmount = orderItems.reduce(
+    (sum: number, item: any) => sum + item.price * item.quantity,
+    0
+  );
+
+  let finalAmount = totalAmount;
+  if (voucherData) {
+    if (voucherData.type === 'percent') {
+      finalAmount = totalAmount * (1 - voucherData.discount_amount / 100);
+    } else {
+      finalAmount = totalAmount - voucherData.discount_amount;
+    }
+    if (finalAmount < 0) finalAmount = 0;
+  }
+
+  const payload: OrderCreateRequest = {
+    customer_id: parseInt(values.customer_id),
+    table_id:
+      values.order_type === 'dine-in' && selectedTables.length > 0
+        ? selectedTables[0].table_id
+        : undefined,
+    order_type: values.order_type,
+    guest_count: values.order_type === 'dine-in' ? values.guest_count : undefined,
+    note: values.note,
+    order_items: orderItems.map((i: any) => ({
+      item_id: i.item_id,
+      quantity: i.quantity,
+    })),
+    final_amount: finalAmount,
+    status: values.status,
+    payment_method: values.payment_method,
+    is_paid: values.is_paid,
+    ...(voucherData
+      ? {
+          voucher_id: voucherData.voucher_id,
+          discount_amount: voucherData.discount_amount,
+        }
+      : {}),
   };
+
+  console.log('📦 Payload gửi đi:', JSON.stringify(payload, null, 2));
+
+  try {
+    let result;
+    if (initialData?.id) {
+      result = await orderApi.update(initialData.id, payload);
+      message.success('Đơn hàng đã được cập nhật');
+      socket.emit('order-updated', result); // 👈 Emit cập nhật
+    } else {
+      result = await orderApi.create(payload);
+      message.success('Đơn hàng đã được tạo');
+      socket.emit('order-created', result); // 👈 Emit tạo mới
+    }
+
+    onSave(result);
+    await tableApi.getAll();
+    form.resetFields();
+  } catch (err) {
+    console.error(err);
+    message.error('Xử lý đơn hàng thất bại');
+  }
+};
+
 
   const handleSelectTable = (tables: Table[]) => {
     setSelectedTables(tables);
@@ -200,20 +213,7 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
         name="customer_id"
         rules={[{ required: true, message: 'Vui lòng chọn khách hàng' }]}
       >
-        <Select
-          showSearch
-          placeholder="Tìm khách hàng"
-          filterOption={false}
-          onSearch={debouncedFetchCustomers}
-          onFocus={fetchCustomers}
-          loading={fetchingCustomers}
-        >
-          {customers.map((c) => (
-            <Option key={c.customer_id} value={String(c.customer_id)}>
-              {c.user_info?.name} ({c.user_info?.account?.email})
-            </Option>
-          ))}
-        </Select>
+        <CustomerSelect />
       </Form.Item>
 
       <Form.Item
@@ -275,7 +275,7 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
           if (value) {
             setVoucherData({
               ...value,
-              type: 'flat', // hoặc lấy dynamic nếu có trong value
+              type: 'flat',
             });
           } else {
             setVoucherData(null);

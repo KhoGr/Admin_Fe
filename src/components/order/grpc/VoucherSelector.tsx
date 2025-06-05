@@ -17,38 +17,48 @@ type Props = {
   onChange: (value: { voucher_id: number; discount_amount: number } | null) => void;
 };
 
-const VoucherSelector = ({ form }: Props) => {
+const VoucherSelector = ({ form, onChange }: Props) => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [loading, setLoading] = useState(false);
   const [discountText, setDiscountText] = useState<string>('');
 
   useEffect(() => {
-    voucherApi.getAll().then((res) => {
-      setVouchers(
-        res.data.map((v: any) => ({
-          ...v,
-          value: String(v.value),
-        })),
-      );
-    });
+    setLoading(true);
+    voucherApi
+      .getAll()
+      .then((res) => {
+        setVouchers(
+          res.data.map((v: any) => ({
+            ...v,
+            value: String(v.value),
+          }))
+        );
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  const calculateDiscount = (voucher: Voucher, total: number) => {
+    const value = parseFloat(voucher.value);
+    let discountAmount = 0;
+    let display = '';
+
+    if (voucher.type === 'flat') {
+      discountAmount = value;
+      display = `Giảm ${value.toLocaleString('vi-VN')} ₫`;
+    } else if (voucher.type === 'percent') {
+      discountAmount = (total * value) / 100;
+      display = `Giảm ${value}% ~ ${discountAmount.toLocaleString('vi-VN')} ₫`;
+    }
+
+    return { discountAmount, display };
+  };
 
   const handleSelect = (voucher_id: number) => {
     const selected = vouchers.find((v) => v.voucher_id === voucher_id);
     if (!selected) return;
 
-    const value = parseFloat(selected.value);
-    let discountAmount = 0;
-    let display = '';
-
-    if (selected.type === 'flat') {
-      discountAmount = value;
-      display = `Giảm ${value.toLocaleString('vi-VN')} ₫`;
-    } else if (selected.type === 'percent') {
-      // Nếu bạn có totalAmount, bạn có thể tính ở đây
-      const total = form.getFieldValue('totalAmount') || 0;
-      discountAmount = (total * value) / 100;
-      display = `Giảm ${value}% ~ ${discountAmount.toLocaleString('vi-VN')} ₫`;
-    }
+    const total = form.getFieldValue('totalAmount') || 0;
+    const { discountAmount, display } = calculateDiscount(selected, total);
 
     form.setFieldsValue({
       voucher_id: selected.voucher_id,
@@ -56,21 +66,48 @@ const VoucherSelector = ({ form }: Props) => {
     });
 
     setDiscountText(display);
+    onChange?.({ voucher_id: selected.voucher_id, discount_amount: discountAmount });
   };
+
+  // Cập nhật lại nếu totalAmount thay đổi và voucher đang chọn là %.
+  useEffect(() => {
+    const voucher_id = form.getFieldValue('voucher_id');
+    const total = form.getFieldValue('totalAmount') || 0;
+    const selected = vouchers.find((v) => v.voucher_id === voucher_id);
+
+    if (selected && selected.type === 'percent') {
+      const { discountAmount, display } = calculateDiscount(selected, total);
+      form.setFieldsValue({ discount_amount: discountAmount });
+      setDiscountText(display);
+      onChange?.({ voucher_id: selected.voucher_id, discount_amount: discountAmount });
+    }
+  }, [form.getFieldValue('totalAmount')]);
 
   return (
     <>
       <Form.Item name="voucher_id" label="Mã giảm giá">
-        <Select placeholder="Chọn mã giảm giá" onSelect={handleSelect}>
-          {vouchers.map((v) => (
-            <Option key={v.voucher_id} value={v.voucher_id}>
-              {v.code} (
-              {v.type === 'flat'
-                ? `-${parseInt(v.value).toLocaleString('vi-VN')}₫`
-                : `-${v.value}%`}
-              )
+        <Select
+          placeholder="Chọn mã giảm giá"
+          loading={loading}
+          onSelect={handleSelect}
+          allowClear
+          onClear={() => {
+            form.setFieldsValue({ voucher_id: null, discount_amount: 0 });
+            setDiscountText('');
+            onChange?.(null);
+          }}
+        >
+          {vouchers.length === 0 ? (
+            <Option value={0} disabled>
+              Không có mã giảm giá khả dụng
             </Option>
-          ))}
+          ) : (
+            vouchers.map((v) => (
+              <Option key={v.voucher_id} value={v.voucher_id}>
+                {v.code} ({v.type === 'flat' ? `-${parseInt(v.value).toLocaleString('vi-VN')}₫` : `-${v.value}%`})
+              </Option>
+            ))
+          )}
         </Select>
       </Form.Item>
 

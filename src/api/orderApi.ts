@@ -4,59 +4,69 @@ import {
   OrderCreateRequest,
   OrderUpdateRequest,
 } from '../types/order';
+import socket from './socketInit'; // 👈 THÊM DÒNG NÀY
 
 const URL = '/order';
 
 const orderApi = {
-  // 📋 🔒 Lấy tất cả đơn hàng (admin)
+  // 📋 Lấy danh sách tất cả đơn hàng
   getAll() {
-    return axiosClient.get<OrderModel[]>(`${URL}`).then(res => res.data);
+    return axiosClient
+      .get<{ success: boolean; data: OrderModel[] }>(`${URL}`)
+      .then(res => res.data.data);
   },
 
-  // 🔍 Tìm kiếm/lọc đơn hàng theo từ khoá/trạng thái/ngày
+  // 🔍 Tìm kiếm/lọc đơn hàng
   search(params: any) {
-    return axiosClient.get<OrderModel[]>(`${URL}/search`, { params }).then(res => res.data);
+    return axiosClient
+      .get<{ success: boolean; data: OrderModel[] }>(`${URL}/search`, { params })
+      .then(res => res.data.data);
   },
 
-  // 🆕 Tạo mới đơn hàng
+  // 🆕 Tạo đơn hàng
   create(data: OrderCreateRequest) {
     return axiosClient
-      .post<{ message: string; order: OrderModel }>(`${URL}`, data)
-      .then(res => res.data.order);
+      .post<{ success: boolean; data: OrderModel }>(`${URL}`, data, {
+        headers: {
+          'x-socket-id': socket.id || '', // 👈 GỬI socket.id
+        },
+      })
+      .then(res => res.data.data);
   },
 
-  // 📦 Lấy chi tiết đơn hàng theo ID
+  // 📦 Lấy đơn hàng theo ID
   getById(orderId: number) {
     return axiosClient
-      .get<{ order: OrderModel }>(`${URL}/${orderId}`)
-      .then(res => res.data.order);
+      .get<{ success: boolean; data: OrderModel }>(`${URL}/${orderId}`)
+      .then(res => res.data.data);
   },
 
-  // 🔁 Cập nhật trạng thái đơn hàng
-  updateStatus(orderId: number, data: OrderUpdateRequest) {
+  // 📝 Cập nhật đơn hàng
+  update(orderId: number, data: OrderUpdateRequest) {
     return axiosClient
-      .patch<{ message: string }>(`${URL}/${orderId}/status`, data)
-      .then(res => res.data);
-  },
-
-  // 💰 Đánh dấu đã thanh toán
-  markPaid(orderId: number, data: Pick<OrderUpdateRequest, 'is_paid'>) {
-    return axiosClient
-      .patch<{ message: string }>(`${URL}/${orderId}/pay`, data)
-      .then(res => res.data);
+      .patch<{ success: boolean; data: OrderModel }>(`${URL}/${orderId}`, data, {
+        headers: {
+          'x-socket-id': socket.id || '', // 👈 GỬI socket.id
+        },
+      })
+      .then(res => res.data.data);
   },
 
   // 🔄 Tính lại tổng tiền đơn hàng
   recalculateTotal(orderId: number) {
     return axiosClient
-      .patch<{ message: string; order: OrderModel }>(`${URL}/${orderId}/recalculate`)
-      .then(res => res.data.order);
+      .patch<{ success: boolean; total: number }>(`${URL}/${orderId}/recalculate`)
+      .then(res => res.data.total);
   },
 
   // ❌ Xoá đơn hàng
   delete(orderId: number) {
     return axiosClient
-      .delete<{ message: string }>(`${URL}/${orderId}`)
+      .delete<{ success: boolean; message: string }>(`${URL}/${orderId}`, {
+        headers: {
+          'x-socket-id': socket.id || '', // 👈 GỬI socket.id
+        },
+      })
       .then(res => res.data);
   },
 };

@@ -74,7 +74,7 @@ const TablePage: React.FC = () => {
       }
 
       fetchTables(); // tự cập nhật tab hiện tại
-      socket.emit('table-updated'); // thông báo các tab khác cập nhật
+      socket.emit('table-updated'); 
       setFormVisible(false);
       setSelectedTable(null);
     } catch (err) {

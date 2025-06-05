@@ -21,6 +21,7 @@ const OrderItemFields = ({ form }: Props) => {
     { label: string; value: number }[]
   >([]);
 
+  // Gọi API tìm kiếm món ăn
   const debouncedSearch = useRef(
     debounce(async (value: string) => {
       if (!value.trim()) return;
@@ -70,30 +71,38 @@ const OrderItemFields = ({ form }: Props) => {
               >
                 <Form.Item
                   {...restField}
-                  name={[name, 'item_id']} // ✅ Đúng key rồi
+                  name={[name, 'item_id']}
                   rules={[{ required: true, message: 'Chọn món ăn' }]}
                 >
                   <Select
                     showSearch
+                    labelInValue
                     placeholder="Tìm món ăn"
                     filterOption={false}
                     onSearch={debouncedSearch}
                     options={menuOptions}
                     style={{ width: 200 }}
-                    onSelect={(value) => {
-                      menuItemApi.getById(value).then((res) => {
-                        const price = parseFloat(
-                          String(res.data.price ?? '0')
-                        );
+                    onSelect={async (option) => {
+                      const itemId = option.value;
+                      try {
+                        const res = await menuItemApi.getById(itemId);
+                        const price = parseFloat(String(res.data.price ?? '0'));
+
                         const currentItems = form.getFieldValue('items') || [];
                         const updatedItems = [...currentItems];
+
                         updatedItems[name] = {
                           ...updatedItems[name],
-                          item_id: value, // ✅ Đảm bảo lưu item_id
+                          item_id: {
+                            value: itemId,
+                            label: res.data.name,
+                          },
                           price,
                         };
                         form.setFieldsValue({ items: updatedItems });
-                      });
+                      } catch (error) {
+                        console.error('Failed to get item by id:', error);
+                      }
                     }}
                   />
                 </Form.Item>
