@@ -27,6 +27,7 @@ const ChatbotPage=Loadable(lazy(()=>import("../pages/chatbot/ChatBot")))
 const TablePage=Loadable(lazy(()=>import("../pages/table/TablePage")))
 const VipPage=Loadable(lazy(()=>import("../pages/vip/VipCustomers")))
 const VoucherPage=Loadable(lazy(()=>import("../pages/voucher/voucherPage")))
+const AttendancePage=Loadable(lazy(()=>import("../pages/attendance/AttendancePage")))
 
 
 
@@ -53,7 +54,8 @@ const Router = createBrowserRouter([
       {path:"/admin/chatbot",element:<ChatbotPage/>},
       {path:"/admin/table",element:<TablePage/>},
       {path:"/admin/vip",element:<VipPage/>},
-      {path:"/admin/voucher",element:<VoucherPage/>}
+      {path:"/admin/voucher",element:<VoucherPage/>},
+      {path:"/admin/attendance",element:<AttendancePage/>}
 
     ],
   },

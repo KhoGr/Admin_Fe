@@ -36,6 +36,10 @@ export default defineConfig({
   // ✅ Thêm cấu hình server ở đây
   server: {
     port: 5173, // 👈 đổi thành cổng bạn muốn
+    allowedHosts: [
+      'aa3c-14-177-79-8.ngrok-free.app', // 👈 Thay bằng host ngrok của bạn
+      // Có thể thêm nhiều host khác nếu cần
+    ]
   },
 
   base: '/',
