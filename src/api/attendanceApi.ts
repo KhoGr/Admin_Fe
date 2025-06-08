@@ -53,6 +53,13 @@ const attendanceApi = {
       .delete<{ message: string }>(`${URL}/${attendance_id}`)
       .then(res => res.data);
   },
+  getByStaffAndPeriod(staff_id: number, start_date: string, end_date: string) {
+  return axiosClient
+    .get<Attendance[]>(`${URL}/search-by-period`, {
+      params: { staff_id, start_date, end_date },
+    })
+    .then(res => res.data);
+},
 };
 
 export default attendanceApi;
