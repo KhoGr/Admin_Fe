@@ -2,6 +2,8 @@ import React, { useEffect } from "react";
 import { Modal, Form, Input, DatePicker } from "antd";
 import { Attendance, AttendanceCreatePayload } from "../../types/attendance";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 
 type Props = {
   open: boolean;
@@ -22,12 +24,12 @@ const AttendanceFormModal: React.FC<Props> = ({
     if (initialData) {
       form.setFieldsValue({
         ...initialData,
-        check_in_time: initialData.check_in_time
-          ? dayjs(initialData.check_in_time)
-          : undefined,
-        check_out_time: initialData.check_out_time
-          ? dayjs(initialData.check_out_time)
-          : undefined,
+check_in_time: initialData.check_in_time
+  ? dayjs.utc(initialData.check_in_time)
+  : undefined,
+check_out_time: initialData.check_out_time
+  ? dayjs.utc(initialData.check_out_time)
+  : undefined,
       });
     } else {
       form.resetFields();

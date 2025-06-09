@@ -17,7 +17,7 @@ const ScheduleTable: React.FC<Props> = ({ shifts, onView, onDelete }) => {
       title: "Nhân viên",
       dataIndex: "staff",
       key: "staff",
-      render: (staff) => staff?.user?.full_name || "N/A",
+      render: (staff) => staff?.user?.name || "N/A",
     },
     {
       title: "Ngày làm",
@@ -28,18 +28,45 @@ const ScheduleTable: React.FC<Props> = ({ shifts, onView, onDelete }) => {
     {
       title: "Giờ làm",
       key: "hours",
-      render: (_, record) => `${record.start_time}h - ${record.end_time}h`,
+      render: (_, record) =>
+        `${record.start_time?.slice(0, 5)} - ${record.end_time?.slice(0, 5)}`,
     },
     {
       title: "Số giờ",
       key: "duration",
-      render: (_, record) => Number(record.end_time) - Number(record.start_time),
+      render: (_, record) => {
+        const start = dayjs(record.start_time, "HH:mm:ss");
+        const end = dayjs(record.end_time, "HH:mm:ss");
+        const type = record.staff?.working_type;
+
+        if (!start.isValid() || !end.isValid()) return "-";
+
+        const duration = end.diff(start, "minute") / 60;
+        return type === "parttime"
+          ? `${duration.toFixed(1)} giờ`
+          : "1 ngày";
+      },
     },
     {
-      title: "Tiền công",
+      title: "Tiền công dự tính",
       key: "salary",
-    //   render: (_, record) =>
-    //     ((Number(record.end_time) - Number(record.start_time)) * Number(record.hourly_rate)).toLocaleString() + " ₫",
+      render: (_, record) => {
+        const start = dayjs(record.start_time, "HH:mm:ss");
+        const end = dayjs(record.end_time, "HH:mm:ss");
+        const staff = record.staff;
+        const type = staff?.working_type;
+        const salary = Number(staff?.salary);
+
+        if (!start.isValid() || !end.isValid() || isNaN(salary)) return "-";
+
+        if (type === "parttime") {
+          const duration = end.diff(start, "minute") / 60;
+          const total = duration * salary;
+          return `${total.toLocaleString("vi-VN")} ₫`;
+        } else {
+          return `${salary.toLocaleString("vi-VN")} ₫`;
+        }
+      },
     },
     {
       title: "Ghi chú",
@@ -78,7 +105,7 @@ const ScheduleTable: React.FC<Props> = ({ shifts, onView, onDelete }) => {
     <Table
       columns={columns}
       dataSource={shifts}
-      rowKey="id"
+      rowKey="work_shift_id"
       pagination={{ pageSize: 10 }}
     />
   );
