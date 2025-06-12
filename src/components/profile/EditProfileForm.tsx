@@ -1,13 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMe } from '../../redux/slices/auth.slice';
 import { RootState, AppDispatch } from '../../redux/store';
-import { Upload, Form, Input, Button, Card, Avatar, message, Select } from 'antd';
+import {
+  Upload,
+  Form,
+  Input,
+  Button,
+  Card,
+  Avatar,
+  message,
+  Select,
+} from 'antd';
 import {
   UploadOutlined,
   UserOutlined,
   PhoneOutlined,
-  MailOutlined,
   EnvironmentOutlined,
 } from '@ant-design/icons';
 import ImgCrop from 'antd-img-crop';
@@ -20,30 +29,31 @@ const { Option } = Select;
 const EditProfileForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+
   const { user, loading } = useSelector((state: RootState) => state.auth);
+  const userId = useSelector((state: RootState) => state.auth.user?.id);
+
   const [form] = Form.useForm();
   const [avatar, setAvatar] = useState<string | null>(user?.avatar || null);
-
   const [cities, setCities] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
-
   const [uploading, setUploading] = useState(false);
+
   const addressApi = {
     getCities: () => axios.get('https://provinces.open-api.vn/api/p/'),
-
     getDistricts: (cityCode: string) =>
       axios.get(`https://provinces.open-api.vn/api/p/${cityCode}?depth=2`),
     getWards: (districtCode: string) =>
       axios.get(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`),
   };
+
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
         name: user.name,
         username: user.username,
         phone: user.phone,
-        email: user.email,
         role: user.role,
       });
       setAvatar(user.avatar || null);
@@ -52,7 +62,6 @@ const EditProfileForm: React.FC = () => {
         const citiesData = res.data;
         setCities(citiesData);
 
-        // Nếu có địa chỉ từ DB thì tách ra
         if (user.address) {
           const parts = user.address.split(',').map((s) => s.trim());
           if (parts.length >= 4) {
@@ -74,7 +83,6 @@ const EditProfileForm: React.FC = () => {
             const ward = wardsData.find((w: any) => w.name.includes(wardName));
             if (!ward) return;
 
-            // Set lại danh sách cho dropdown
             setDistricts(districtsData);
             setWards(wardsData);
 
@@ -93,8 +101,6 @@ const EditProfileForm: React.FC = () => {
   const handleCityChange = async (code: string) => {
     form.setFieldsValue({ city: code, district: undefined, ward: undefined });
     const res = await addressApi.getDistricts(code);
-    console.log('Districts from city:', res.data.districts); // Kiểm tra data
-
     setDistricts(res.data.districts);
     setWards([]);
   };
@@ -126,10 +132,17 @@ const EditProfileForm: React.FC = () => {
   };
 
   const handleUpload = async (file: File) => {
+    if (!userId) {
+      message.error('Không tìm thấy user_id!');
+      return;
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('avatar', file);
+      formData.append('user_id', userId.toString()); // ✅ Gửi user_id
+
       const response = await userApi.updateAvatar(formData);
       if (response.status === 200) {
         message.success('Cập nhật ảnh đại diện thành công!');
@@ -153,16 +166,17 @@ const EditProfileForm: React.FC = () => {
         padding: '20px',
       }}
     >
-    <Card
-      className="w-full max-w-[600px]"
-      bodyStyle={{ padding: 24 }}
-      style={{
-        borderRadius: '10px',
-        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-        width: '100%',
-        maxWidth: 600
-      }}
-    >        <h2 className="text-center text-2xl font-semibold mb-6">Chỉnh Sửa Hồ Sơ</h2>
+      <Card
+        className="w-full max-w-[600px]"
+        bodyStyle={{ padding: 24 }}
+        style={{
+          borderRadius: '10px',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+          width: '100%',
+          maxWidth: 600,
+        }}
+      >
+        <h2 className="text-center text-2xl font-semibold mb-6">Chỉnh Sửa Hồ Sơ</h2>
         <div className="flex justify-center mb-6">
           <ImgCrop>
             <Upload
@@ -204,11 +218,6 @@ const EditProfileForm: React.FC = () => {
             <Input prefix={<PhoneOutlined />} />
           </Form.Item>
 
-          <Form.Item label="Email" name="email" rules={[{ type: 'email' }, { required: true }]}>
-            <Input prefix={<MailOutlined />} disabled />
-          </Form.Item>
-
-          {/* City Select */}
           <Form.Item label="Tỉnh / Thành phố" name="city" rules={[{ required: true }]}>
             <Select placeholder="Chọn tỉnh/thành" onChange={handleCityChange}>
               {cities.map((city) => (
@@ -219,7 +228,6 @@ const EditProfileForm: React.FC = () => {
             </Select>
           </Form.Item>
 
-          {/* District Select */}
           <Form.Item label="Quận / Huyện" name="district" rules={[{ required: true }]}>
             <Select placeholder="Chọn quận/huyện" onChange={handleDistrictChange}>
               {districts.map((district) => (
@@ -230,7 +238,6 @@ const EditProfileForm: React.FC = () => {
             </Select>
           </Form.Item>
 
-          {/* Ward Select */}
           <Form.Item label="Phường / Xã" name="ward" rules={[{ required: true }]}>
             <Select placeholder="Chọn phường/xã" onChange={handleWardChange}>
               {wards.map((ward) => (
@@ -240,7 +247,7 @@ const EditProfileForm: React.FC = () => {
               ))}
             </Select>
           </Form.Item>
-          {/* Street input */}
+
           <Form.Item label="Số nhà, tên đường" name="street" rules={[{ required: true }]}>
             <Input prefix={<EnvironmentOutlined />} />
           </Form.Item>

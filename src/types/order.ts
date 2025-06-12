@@ -6,9 +6,10 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded';
 
-export type OrderType = 'dine-in' | 'take-away' | 'delivery';
+export type OrderType = 'reservation' | 'dine-in' | 'take-away' | 'delivery';
 export type TableStatus = 'available' | 'occupied' | 'reserved' | 'unavailable';
 export type VoucherType = 'flat' | 'percent';
+export type PaymentMethod = 'cash' | 'atm' | 'vnpay' | 'momo' | string;
 
 // Account info nested in user_info
 export interface AccountModel {
@@ -91,10 +92,12 @@ export interface OrderItemModel {
 export interface OrderModel {
   id: number;
   customer_id?: number | null;
-  table_id?: number | null;
   voucher_id?: number | null;
   guest_count?: number | null;
   order_type: OrderType;
+  reservation_time?: string | null;
+  delivery_address?: string | null;
+  phone?: string | null;
   order_date: string;
   total_amount: number;
   discount_amount: string;
@@ -103,29 +106,32 @@ export interface OrderModel {
   free_shipping_applied: boolean;
   final_amount: string;
   status: OrderStatus;
-  payment_method?: string | null;
+  payment_method?: PaymentMethod | null;
   is_paid: boolean;
   note?: string | null;
   created_at: string;
   updated_at: string;
 
   customer?: CustomerModel;
-  table?: TableModel;
+  tables?: TableModel[];
   voucher?: VoucherModel;
   order_items?: OrderItemModel[];
 }
 
 export interface OrderCreateRequest {
   customer_id?: number | null;
-  table_id?: number | null;
+  table_ids?: number[];
   voucher_id?: number | null;
   guest_count?: number | null;
   order_type: OrderType;
+  reservation_time?: string;
+  delivery_address?: string;
+  phone?: string;
 
-order_items: {
-  item_id: number; // ✅ Đổi từ product_id -> item_id
-  quantity: number;
-}[]
+  order_items: {
+    item_id: number;
+    quantity: number;
+  }[];
 
   note?: string;
   order_date?: string;
@@ -136,7 +142,7 @@ order_items: {
   free_shipping_applied?: boolean;
   final_amount?: number;
   status?: OrderStatus;
-  payment_method?: 'cash' | 'atm' | string;
+  payment_method?: PaymentMethod;
   is_paid?: boolean;
 }
 
@@ -144,6 +150,9 @@ export interface OrderUpdateRequest {
   status?: OrderStatus;
   is_paid?: boolean;
   note?: string;
-  table_id?: number | null;
+  table_ids?: number[];
   voucher_code?: string;
+  reservation_time?: string;
+  delivery_address?: string;
+  phone?: string;
 }

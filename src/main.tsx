@@ -11,7 +11,7 @@ createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
     <Suspense fallback={<Spinner />}>
       <>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} /> {/* 👈 Add Toaster here */}
+        <Toaster position="top-right" toastOptions={{ duration: 3000 }} /> 
         <App />
       </>
     </Suspense>

@@ -29,7 +29,7 @@ const SidebarContent: MenuItem[] = [
         name: "Bảng điều khiển",
         icon: "solar:pie-chart-2-outline",
         id: uniqueId(),
-        url: "/",
+        url: "/dashboard",
       },
     ],
   },
@@ -49,8 +49,8 @@ const SidebarContent: MenuItem[] = [
         url: "/admin/menu-item",
       },
       {
-        name: "Quản lý bàn", // Bổ sung mục mới
-        icon: "solar:square-line-duotone", // Icon bàn
+        name: "Quản lý bàn",
+        icon: "solar:square-line-duotone",
         id: uniqueId(),
         url: "/admin/table",
       },
@@ -90,10 +90,39 @@ const SidebarContent: MenuItem[] = [
         url: "/admin/customer",
       },
       {
+        name: "Khách VIP",
+        icon: "solar:vip-diamond-outline",
+        id: uniqueId(),
+        url: "/admin/vip",
+      },
+      {
         name: "Lịch làm việc",
         icon: "solar:calendar-outline",
         id: uniqueId(),
         url: "/admin/work-schedule",
+      },
+      {
+        name: "Chấm công",
+        icon: "solar:checklist-outline",
+        id: uniqueId(),
+        url: "/admin/attendance",
+      },
+      {
+        name: "Lương nhân viên",
+        icon: "solar:money-bag-outline",
+        id: uniqueId(),
+        url: "/admin/payroll",
+      },
+    ],
+  },
+  {
+    heading: "KHUYẾN MÃI",
+    children: [
+      {
+        name: "Quản lý voucher",
+        icon: "solar:ticket-outline",
+        id: uniqueId(),
+        url: "/admin/voucher",
       },
     ],
   },
