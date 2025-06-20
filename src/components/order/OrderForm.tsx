@@ -102,9 +102,9 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
         const voucher = {
           voucher_id: initialData.voucher_id,
           discount_amount: Number(initialData.discount_amount),
-          type: 'flat',
+          type: 'flat' as 'flat',
         };
-        setVoucherData(voucher as unknown as 'percent' | 'flat');
+        setVoucherData(voucher);
       }
     }
   }, [initialData]);
@@ -159,7 +159,7 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
       note: values.note,
       delivery_address: values.delivery_address,
       phone: values.phone,
-      order_items: orderItems.map((i) => ({
+      order_items: orderItems.map((i: any) => ({
         item_id: i.item_id,
         quantity: i.quantity,
       })),
@@ -317,13 +317,13 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
       <Typography.Title level={5}>Voucher</Typography.Title>
       <VoucherSelector
         form={form}
-        onChange={(value) => {
+        onChange={(value: { voucher_id: number; discount_amount: number; type: 'flat' | 'percent' } | null) => {
           if (value) {
             if (value.type === 'flat' || value.type === 'percent') {
               setVoucherData({
                 voucher_id: value.voucher_id,
                 discount_amount: value.discount_amount,
-                type: value?.type, // ✅ đã được kiểm tra an toàn
+                type: value.type,
               });
             } else {
               console.warn('Voucher type không hợp lệ:', value.type);
@@ -381,8 +381,10 @@ const OrderForm = ({ initialData, onSave, onCancel }: Props) => {
         open={isTableModalOpen}
         onClose={() => setIsTableModalOpen(false)}
         tables={tables}
-        selectedTables={selectedTables}
         onSelect={handleSelectTable}
+        selected={selectedTables}
+        guestCount={guestCount}
+        onCancel={() => setIsTableModalOpen(false)}
       />
     </Form>
   );

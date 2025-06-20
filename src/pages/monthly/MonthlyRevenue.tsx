@@ -1,366 +1,238 @@
-import { useEffect, useState } from "react";
-import { Card, Col, Row, Statistic, Tabs, Table, Button } from "antd";
+// MonthlyFinanceSummaryPage.tsx
+// ------------------------------------------------------
+// Hiển thị báo cáo tài chính hằng tháng với tiền VNĐ
+// Thêm tính năng hiển thị % tăng trưởng tháng này so với tháng trước
+// ------------------------------------------------------
+import { useEffect, useState } from 'react';
 import {
-  DownloadOutlined,
+  Card,
+  Col,
+  Row,
+  Statistic,
+  Tabs,
+  Table,
+  Button,
+  Skeleton,
+  message,
+} from 'antd';
+import {
   RiseOutlined,
   FallOutlined,
+  DollarOutlined,
   BarChartOutlined,
-  DollarOutlined
-} from "@ant-design/icons";
+  DownloadOutlined,
+} from '@ant-design/icons';
 import {
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
+  CartesianGrid,
   Tooltip,
+  Legend,
   XAxis,
   YAxis,
-  Bar
-} from "recharts";
+  BarChart,
+  Bar,
+} from 'recharts';
 
-interface MonthlyRevenueType {
-  id: string;
-  month: string;
-  year: number;
-  revenue: number;
-  expenses: number;
-  profit: number;
-  topSellingItems: { name: string; revenue: number }[];
+//---------------------------------------------
+// 1. Kiểu dữ liệu phù hợp model Sequelize
+//---------------------------------------------
+export interface MonthlyFinanceSummaryType {
+  id: number;
+  month: string; // "YYYY-MM"
+  total_revenue: number;
+  total_payroll: number;
+  total_orders: number;
+  note?: string | null;
+  profit?: number;
+  growthRate?: number; // phần trăm tăng trưởng so với tháng trước
 }
 
-// Mock API
-const fetchMonthlyRevenue = async (): Promise<MonthlyRevenueType[]> => {
-  // Mock data như bạn đã có
-  return [
-    {
-      id: "1",
-      month: "January",
-      year: 2023,
-      revenue: 42500,
-      expenses: 28000,
-      profit: 14500,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 5200 },
-        { name: "Grilled Salmon", revenue: 4800 },
-        { name: "Chocolate Cake", revenue: 3200 },
-      ]
-    },
-    {
-      id: "2",
-      month: "February",
-      year: 2023,
-      revenue: 38900,
-      expenses: 26500,
-      profit: 12400,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 4800 },
-        { name: "Grilled Salmon", revenue: 4300 },
-        { name: "Tiramisu", revenue: 3600 },
-      ]
-    },
-    {
-      id: "3",
-      month: "March",
-      year: 2023,
-      revenue: 45200,
-      expenses: 29000,
-      profit: 16200,
-      topSellingItems: [
-        { name: "Grilled Salmon", revenue: 5400 },
-        { name: "Spaghetti Carbonara", revenue: 4900 },
-        { name: "Chocolate Cake", revenue: 3800 },
-      ]
-    },
-    {
-      id: "4",
-      month: "April",
-      year: 2023,
-      revenue: 43800,
-      expenses: 27800,
-      profit: 16000,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 5100 },
-        { name: "Tiramisu", revenue: 4700 },
-        { name: "Grilled Salmon", revenue: 4500 },
-      ]
-    },
-    {
-      id: "5",
-      month: "May",
-      year: 2023,
-      revenue: 47600,
-      expenses: 30200,
-      profit: 17400,
-      topSellingItems: [
-        { name: "Grilled Salmon", revenue: 5600 },
-        { name: "Spaghetti Carbonara", revenue: 5200 },
-        { name: "Chocolate Cake", revenue: 4100 },
-      ]
-    },
-    {
-      id: "6",
-      month: "June",
-      year: 2023,
-      revenue: 51200,
-      expenses: 32000,
-      profit: 19200,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 6000 },
-        { name: "Grilled Salmon", revenue: 5800 },
-        { name: "Tiramisu", revenue: 4600 },
-      ]
-    },
-    {
-      id: "7",
-      month: "July",
-      year: 2023,
-      revenue: 54800,
-      expenses: 33900,
-      profit: 20900,
-      topSellingItems: [
-        { name: "Grilled Salmon", revenue: 6400 },
-        { name: "Spaghetti Carbonara", revenue: 6200 },
-        { name: "Chocolate Cake", revenue: 5000 },
-      ]
-    },
-    {
-      id: "8",
-      month: "August",
-      year: 2023,
-      revenue: 56300,
-      expenses: 34700,
-      profit: 21600,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 6600 },
-        { name: "Grilled Salmon", revenue: 6500 },
-        { name: "Tiramisu", revenue: 5300 },
-      ]
-    },
-    {
-      id: "9",
-      month: "September",
-      year: 2023,
-      revenue: 52900,
-      expenses: 32800,
-      profit: 20100,
-      topSellingItems: [
-        { name: "Grilled Salmon", revenue: 6200 },
-        { name: "Spaghetti Carbonara", revenue: 6000 },
-        { name: "Chocolate Cake", revenue: 4900 },
-      ]
-    },
-    {
-      id: "10",
-      month: "October",
-      year: 2023,
-      revenue: 49500,
-      expenses: 31200,
-      profit: 18300,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 5800 },
-        { name: "Grilled Salmon", revenue: 5700 },
-        { name: "Tiramisu", revenue: 4700 },
-      ]
-    },
-    {
-      id: "11",
-      month: "November",
-      year: 2023,
-      revenue: 47200,
-      expenses: 30100,
-      profit: 17100,
-      topSellingItems: [
-        { name: "Grilled Salmon", revenue: 5500 },
-        { name: "Spaghetti Carbonara", revenue: 5300 },
-        { name: "Chocolate Cake", revenue: 4400 },
-      ]
-    },
-    {
-      id: "12",
-      month: "December",
-      year: 2023,
-      revenue: 58900,
-      expenses: 35900,
-      profit: 23000,
-      topSellingItems: [
-        { name: "Spaghetti Carbonara", revenue: 6900 },
-        { name: "Grilled Salmon", revenue: 6800 },
-        { name: "Tiramisu", revenue: 5600 },
-      ]
-    },
-  ];
+//---------------------------------------------
+// 2. Mock API (thay bằng real API khi có)
+//---------------------------------------------
+const fetchMonthlyFinanceSummary = async (
+  year: number,
+): Promise<MonthlyFinanceSummaryType[]> => {
+  try {
+    const res = await fetch(`/api/finance/monthly?year=${year}`);
+    if (!res.ok) throw new Error('API error');
+    const data = (await res.json()) as MonthlyFinanceSummaryType[];
+    return calculateDerivedFields(data);
+  } catch (err) {
+    message.warning('Đang dùng mock data (chưa có API)');
+    const mock = [
+      { id: 1, month: `${year}-01`, total_revenue: 42500000, total_payroll: 28000000, total_orders: 650, note: null },
+      { id: 2, month: `${year}-02`, total_revenue: 38900000, total_payroll: 26500000, total_orders: 580, note: null },
+      { id: 3, month: `${year}-03`, total_revenue: 45200000, total_payroll: 29000000, total_orders: 720, note: null },
+      { id: 4, month: `${year}-04`, total_revenue: 43800000, total_payroll: 27800000, total_orders: 680, note: null },
+      { id: 5, month: `${year}-05`, total_revenue: 47600000, total_payroll: 30200000, total_orders: 750, note: null },
+      { id: 6, month: `${year}-06`, total_revenue: 51200000, total_payroll: 32000000, total_orders: 790, note: null },
+      { id: 7, month: `${year}-07`, total_revenue: 54800000, total_payroll: 33900000, total_orders: 810, note: null },
+      { id: 8, month: `${year}-08`, total_revenue: 56300000, total_payroll: 34700000, total_orders: 835, note: null },
+      { id: 9, month: `${year}-09`, total_revenue: 52900000, total_payroll: 32800000, total_orders: 770, note: null },
+      { id: 10, month: `${year}-10`, total_revenue: 49500000, total_payroll: 31200000, total_orders: 720, note: null },
+      { id: 11, month: `${year}-11`, total_revenue: 47200000, total_payroll: 30100000, total_orders: 690, note: null },
+      { id: 12, month: `${year}-12`, total_revenue: 58900000, total_payroll: 35900000, total_orders: 820, note: null },
+    ];
+    return calculateDerivedFields(mock);
+  }
 };
 
-const MonthlyRevenue = () => {
-  const [revenueData, setRevenueData] = useState<MonthlyRevenueType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const calculateDerivedFields = (data: MonthlyFinanceSummaryType[]): MonthlyFinanceSummaryType[] => {
+  return data.map((d, i, arr) => {
+    const profit = d.total_revenue - d.total_payroll;
+    const prev = arr[i - 1];
+    const growthRate = prev ? ((d.total_revenue - prev.total_revenue) / prev.total_revenue) * 100 : 0;
+    return { ...d, profit, growthRate };
+  });
+};
+
+//---------------------------------------------
+// 3. Component chính
+//---------------------------------------------
+const MonthlyFinanceSummaryPage = () => {
+  const [data, setData] = useState<MonthlyFinanceSummaryType[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [year] = useState<number>(new Date().getFullYear());
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      const data = await fetchMonthlyRevenue();
-      setRevenueData(data);
-      setIsLoading(false);
+    const load = async () => {
+      setLoading(true);
+      const res = await fetchMonthlyFinanceSummary(year);
+      setData(res);
+      setLoading(false);
     };
-    fetchData();
-  }, []);
+    load();
+  }, [year]);
 
-  const [selectedYear] = useState(2023);
-  const totalRevenue = revenueData.reduce((sum, item) => sum + item.revenue, 0);
-  const totalExpenses = revenueData.reduce((sum, item) => sum + item.expenses, 0);
-  const totalProfit = revenueData.reduce((sum, item) => sum + item.profit, 0);
-  const avgMonthlyRevenue = totalRevenue / (revenueData.length || 1);
+  const formatCurrency = (value: number | string | undefined) => {
+    if (typeof value === 'number') {
+      return `${value.toLocaleString('vi-VN')} ₫`;
+    }
+    if (typeof value === 'string' && !isNaN(Number(value))) {
+      return `${Number(value).toLocaleString('vi-VN')} ₫`;
+    }
+    return value;
+  };
+  const formatPercent = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 
-  const tableColumns = [
-    { title: 'Month', dataIndex: 'month', key: 'month' },
-    { title: 'Year', dataIndex: 'year', key: 'year' },
+  const totalRevenue = data.reduce((s, v) => s + v.total_revenue, 0);
+  const totalPayroll = data.reduce((s, v) => s + v.total_payroll, 0);
+  const totalProfit = data.reduce((s, v) => s + (v.profit || 0), 0);
+  const avgMonthlyRevenue = totalRevenue / (data.length || 1);
+
+  const columns = [
+    { title: 'Tháng', dataIndex: 'month', key: 'month' },
     {
-      title: 'Revenue',
-      dataIndex: 'revenue',
+      title: 'Doanh thu',
+      dataIndex: 'total_revenue',
       key: 'revenue',
-      render: (value: number) => `$${value.toLocaleString()}`
+      render: (v: number) => formatCurrency(v),
     },
     {
-      title: 'Expenses',
-      dataIndex: 'expenses',
-      key: 'expenses',
-      render: (value: number) => `$${value.toLocaleString()}`
+      title: 'Chi lương',
+      dataIndex: 'total_payroll',
+      key: 'payroll',
+      render: (v: number) => formatCurrency(v),
     },
     {
-      title: 'Profit',
+      title: 'Lợi nhuận',
       dataIndex: 'profit',
       key: 'profit',
-      render: (value: number) => (
-        <span style={{ color: value >= 0 ? 'green' : 'red', fontWeight: 500 }}>
-          ${value.toLocaleString()}
-        </span>
-      )
-    }
+      render: (v: number) => (
+        <span style={{ color: v >= 0 ? 'green' : 'red', fontWeight: 500 }}>{formatCurrency(v)}</span>
+      ),
+    },
+    {
+      title: 'Tăng trưởng',
+      dataIndex: 'growthRate',
+      key: 'growth',
+      render: (v: number) => (
+        <span style={{ color: v >= 0 ? 'green' : 'red' }}>{formatPercent(v)}</span>
+      ),
+    },
+    { title: 'Số đơn', dataIndex: 'total_orders', key: 'orders' },
   ];
 
-  const chartData = revenueData.map(item => ({
-    month: item.month,
-    "Spaghetti Carbonara": item.topSellingItems.find(i => i.name === "Spaghetti Carbonara")?.revenue || 0,
-    "Grilled Salmon": item.topSellingItems.find(i => i.name === "Grilled Salmon")?.revenue || 0,
-    "Chocolate Cake": item.topSellingItems.find(i => i.name === "Chocolate Cake")?.revenue || 0,
-    "Tiramisu": item.topSellingItems.find(i => i.name === "Tiramisu")?.revenue || 0,
+  const chartData = data.map((d) => ({
+    month: d.month.slice(5),
+    Revenue: d.total_revenue,
+    Payroll: d.total_payroll,
+    Profit: d.profit,
   }));
 
-  return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 600 }}>Monthly Revenue Reports</h1>
-      <p style={{ color: 'gray' }}>View and analyze your restaurant's monthly revenue data</p>
+  if (loading) return <Skeleton active style={{ padding: 24 }} />;
 
-      <Row gutter={16} style={{ marginTop: 24 }}>
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-semibold">Tổng quan tài chính theo tháng</h1>
+      <p className="text-gray-500">Năm {year}</p>
+
+      <Row gutter={16} className="mt-6">
         <Col span={6}>
           <Card>
-            <Statistic
-              title="Total Revenue"
-              value={totalRevenue}
-              precision={0}
-              prefix={<DollarOutlined />}
-              valueStyle={{ fontWeight: 600 }}
-            />
-            <div style={{ fontSize: 12, color: 'gray' }}>For the year {selectedYear}</div>
+            <Statistic title="Tổng doanh thu" value={totalRevenue} prefix={<DollarOutlined />} valueStyle={{ fontWeight: 600 }} formatter={formatCurrency} />
+            <div className="text-xs text-gray-400">Năm {year}</div>
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="Total Expenses"
-              value={totalExpenses}
-              precision={0}
-              prefix={<FallOutlined />}
-              valueStyle={{ fontWeight: 600 }}
-            />
-            <div style={{ fontSize: 12, color: 'gray' }}>For the year {selectedYear}</div>
+            <Statistic title="Tổng chi lương" value={totalPayroll} prefix={<FallOutlined />} valueStyle={{ fontWeight: 600 }} formatter={formatCurrency} />
+            <div className="text-xs text-gray-400">Năm {year}</div>
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="Total Profit"
-              value={totalProfit}
-              precision={0}
-              prefix={<RiseOutlined />}
-              valueStyle={{ color: 'green', fontWeight: 600 }}
-            />
-            <div style={{ fontSize: 12, color: 'gray' }}>For the year {selectedYear}</div>
+            <Statistic title="Tổng lợi nhuận" value={totalProfit} prefix={<RiseOutlined />} valueStyle={{ color: 'green', fontWeight: 600 }} formatter={formatCurrency} />
+            <div className="text-xs text-gray-400">Năm {year}</div>
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="Avg Monthly Revenue"
-              value={avgMonthlyRevenue}
-              precision={0}
-              prefix={<BarChartOutlined />}
-              valueStyle={{ fontWeight: 600 }}
-            />
-            <div style={{ fontSize: 12, color: 'gray' }}>Per month in {selectedYear}</div>
+            <Statistic title="Doanh thu TB tháng" value={avgMonthlyRevenue} prefix={<BarChartOutlined />} valueStyle={{ fontWeight: 600 }} formatter={formatCurrency} />
+            <div className="text-xs text-gray-400">Năm {year}</div>
           </Card>
         </Col>
       </Row>
 
-      <Card title="Revenue Overview" style={{ marginTop: 24 }} extra={
-        <Button icon={<DownloadOutlined />} type="default">
-          Download Report
-        </Button>
-      }>
-        <Tabs defaultActiveKey="chart" items={[
-          {
-            key: 'chart',
-            label: 'Chart',
-            children: (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="revenue" fill="#8b5cf6" name="Revenue" />
-                  <Bar dataKey="expenses" fill="#f97316" name="Expenses" />
-                  <Bar dataKey="profit" fill="#10b981" name="Profit" />
-                </BarChart>
-              </ResponsiveContainer>
-            )
-          },
-          {
-            key: 'table',
-            label: 'Table',
-            children: (
-              <Table
-                dataSource={revenueData}
-                columns={tableColumns}
-                rowKey="id"
-                loading={isLoading}
-                pagination={false}
-              />
-            )
-          }
-        ]} />
-      </Card>
-
-      <Card title="Top Selling Items" style={{ marginTop: 24 }}>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="Spaghetti Carbonara" stroke="#8b5cf6" />
-            <Line type="monotone" dataKey="Grilled Salmon" stroke="#f97316" />
-            <Line type="monotone" dataKey="Chocolate Cake" stroke="#10b981" />
-            <Line type="monotone" dataKey="Tiramisu" stroke="#0ea5e9" />
-          </LineChart>
-        </ResponsiveContainer>
+      <Card
+        title="Biểu đồ doanh thu - lương - lợi nhuận"
+        className="mt-6"
+        extra={<Button icon={<DownloadOutlined />}>Download CSV</Button>}
+      >
+        <Tabs
+          defaultActiveKey="chart"
+          items={[
+            {
+              key: 'chart',
+              label: 'Biểu đồ',
+              children: (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                    <Legend />
+                    <Bar dataKey="Revenue" name="Doanh thu" fill="#8b5cf6" />
+                    <Bar dataKey="Payroll" name="Chi lương" fill="#f97316" />
+                    <Bar dataKey="Profit" name="Lợi nhuận" fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ),
+            },
+            {
+              key: 'table',
+              label: 'Bảng chi tiết',
+              children: (
+                <Table dataSource={data} columns={columns} rowKey="id" pagination={false} />
+              ),
+            },
+          ]}
+        />
       </Card>
     </div>
   );
 };
 
-export default MonthlyRevenue;
+export default MonthlyFinanceSummaryPage;

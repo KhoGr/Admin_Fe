@@ -3,7 +3,7 @@ import axios from "axios";
 
 
 const axiosClient = axios.create({
-  baseURL: "http://localhost:4000/api",
+  baseURL: "https://app.genez.io/project/0047d1ef-a2f7-4e6b-811a-71f7d6577a93/57fad252-45fb-4571-bf98-fe2615926365/api",
   headers: {
     "Content-Type": "application/json",
   },

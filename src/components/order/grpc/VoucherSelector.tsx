@@ -14,7 +14,7 @@ type Voucher = {
 
 type Props = {
   form: any;
-  onChange: (value: { voucher_id: number; discount_amount: number } | null) => void;
+  onChange: (value: { voucher_id: number; discount_amount: number, type: 'flat' | 'percent' } | null) => void;
 };
 
 const VoucherSelector = ({ form, onChange }: Props) => {
@@ -66,7 +66,7 @@ const VoucherSelector = ({ form, onChange }: Props) => {
     });
 
     setDiscountText(display);
-    onChange?.({ voucher_id: selected.voucher_id, discount_amount: discountAmount });
+    onChange?.({ voucher_id: selected.voucher_id, discount_amount: discountAmount, type: selected.type });
   };
 
   // Cập nhật lại nếu totalAmount thay đổi và voucher đang chọn là %.
@@ -79,7 +79,7 @@ const VoucherSelector = ({ form, onChange }: Props) => {
       const { discountAmount, display } = calculateDiscount(selected, total);
       form.setFieldsValue({ discount_amount: discountAmount });
       setDiscountText(display);
-      onChange?.({ voucher_id: selected.voucher_id, discount_amount: discountAmount });
+      onChange?.({ voucher_id: selected.voucher_id, discount_amount: discountAmount, type: selected.type });
     }
   }, [form.getFieldValue('totalAmount')]);
 

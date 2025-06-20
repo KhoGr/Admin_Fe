@@ -29,6 +29,7 @@ const VipPage=Loadable(lazy(()=>import("../pages/vip/VipCustomers")))
 const VoucherPage=Loadable(lazy(()=>import("../pages/voucher/voucherPage")))
 const AttendancePage=Loadable(lazy(()=>import("../pages/attendance/AttendancePage")))
 const PayrollPage=Loadable(lazy(()=>import("../pages/payroll/PayrollPage")))
+const AdminQrCode=Loadable(lazy(()=>import("../pages/qr/AdminQrCode")))
 
 
 
@@ -57,7 +58,8 @@ const Router = createBrowserRouter([
       {path:"/admin/vip",element:<VipPage/>},
       {path:"/admin/voucher",element:<VoucherPage/>},
       {path:"/admin/attendance",element:<AttendancePage/>},
-      {path:"/admin/payroll",element:<PayrollPage/>}
+      {path:"/admin/payroll",element:<PayrollPage/>},
+      {path:"/admin/qr",element:<AdminQrCode/>}
 
     ],
   },
