@@ -3,7 +3,7 @@ import axios from "axios";
 
 
 const axiosClient = axios.create({
-  baseURL: "https://47446b02-e61b-4d87-99cf-149c83515ca3.us-east-1.cloud.genez.io/api",
+  baseURL: "https://back-end-1-jhf8.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },
