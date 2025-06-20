@@ -36,7 +36,7 @@ const OrderTable: React.FC<OrderTableProps> = ({ orders, onEdit, onDelete, searc
     {
       title: 'Table',
       key: 'table',
-      render: (_, order) => order.table ? `Table ${order.table.table_number}` : 'Takeaway',
+      render: (_, order) => order.tables && order.tables.length > 0 ? `Table ${order.tables[0].table_number}` : 'Takeaway',
     },
     {
       title: 'Final',

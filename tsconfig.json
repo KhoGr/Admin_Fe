@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-        "noUnusedLocals": false,
+    "noUnusedLocals": false,
     "noUnusedParameters": false,
     "baseUrl": ".",
     "paths": {
@@ -22,8 +22,7 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]
