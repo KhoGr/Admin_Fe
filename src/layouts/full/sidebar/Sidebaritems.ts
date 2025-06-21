@@ -137,35 +137,35 @@ const SidebarContent: MenuItem[] = [
       },
     ],
   },
-  {
-    heading: "CÀI ĐẶT",
-    children: [
-      {
-        name: "Thông tin nhà hàng",
-        icon: "solar:shop-outline",
-        id: uniqueId(),
-        url: "/admin/settings",
-      },
-      {
-        name: "Tài khoản của tôi",
-        icon: "solar:user-circle-line-duotone",
-        id: uniqueId(),
-        url: "/account/profile",
-      },
-      {
-        name: "Chỉnh sửa hồ sơ",
-        icon: "solar:pen-new-square-linear",
-        id: uniqueId(),
-        url: "/account/edit-profile",
-      },
-      {
-        name: "Chi tiết sản phẩm",
-        icon: "solar:tag-outline",
-        id: uniqueId(),
-        url: "/account/product-detail",
-      },
-    ],
-  },
+  // {
+  //   heading: "CÀI ĐẶT",
+  //   children: [
+  //     {
+  //       name: "Thông tin nhà hàng",
+  //       icon: "solar:shop-outline",
+  //       id: uniqueId(),
+  //       url: "/admin/settings",
+  //     },
+  //     {
+  //       name: "Tài khoản của tôi",
+  //       icon: "solar:user-circle-line-duotone",
+  //       id: uniqueId(),
+  //       url: "/account/profile",
+  //     },
+  //     {
+  //       name: "Chỉnh sửa hồ sơ",
+  //       icon: "solar:pen-new-square-linear",
+  //       id: uniqueId(),
+  //       url: "/account/edit-profile",
+  //     },
+  //     {
+  //       name: "Chi tiết sản phẩm",
+  //       icon: "solar:tag-outline",
+  //       id: uniqueId(),
+  //       url: "/account/product-detail",
+  //     },
+  //   ],
+  // },
   {
     heading: "HỖ TRỢ",
     children: [
