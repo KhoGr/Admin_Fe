@@ -1,123 +1,108 @@
-// MonthlyFinanceSummaryPage.tsx
-// ------------------------------------------------------
-// Hiển thị báo cáo tài chính hằng tháng với tiền VNĐ
-// Thêm tính năng hiển thị % tăng trưởng tháng này so với tháng trước
-// ------------------------------------------------------
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Card,
   Col,
   Row,
   Statistic,
-  Tabs,
   Table,
+  Tabs,
   Button,
   Skeleton,
   message,
 } from 'antd';
 import {
-  RiseOutlined,
-  FallOutlined,
   DollarOutlined,
+  FallOutlined,
+  RiseOutlined,
   BarChartOutlined,
-  DownloadOutlined,
 } from '@ant-design/icons';
 import {
-  ResponsiveContainer,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  XAxis,
-  YAxis,
   BarChart,
   Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
 } from 'recharts';
+import monthlyFinanceApi from '../../api/monthlyFinanceApi';
+import ExportCSVButton from '../../components/monthly/ExportCSVButton';
+import AddMonthlySummaryModal from '../../components/monthly/AddMonthlySummaryModal';
 
-//---------------------------------------------
-// 1. Kiểu dữ liệu phù hợp model Sequelize
-//---------------------------------------------
-export interface MonthlyFinanceSummaryType {
-  id: number;
-  month: string; // "YYYY-MM"
-  total_revenue: number;
-  total_payroll: number;
-  total_orders: number;
-  note?: string | null;
-  profit?: number;
-  growthRate?: number; // phần trăm tăng trưởng so với tháng trước
-}
-
-//---------------------------------------------
-// 2. Mock API (thay bằng real API khi có)
-//---------------------------------------------
-const fetchMonthlyFinanceSummary = async (
-  year: number,
-): Promise<MonthlyFinanceSummaryType[]> => {
-  try {
-    const res = await fetch(`/api/finance/monthly?year=${year}`);
-    if (!res.ok) throw new Error('API error');
-    const data = (await res.json()) as MonthlyFinanceSummaryType[];
-    return calculateDerivedFields(data);
-  } catch (err) {
-    message.warning('Đang dùng mock data (chưa có API)');
-    const mock = [
-      { id: 1, month: `${year}-01`, total_revenue: 42500000, total_payroll: 28000000, total_orders: 650, note: null },
-      { id: 2, month: `${year}-02`, total_revenue: 38900000, total_payroll: 26500000, total_orders: 580, note: null },
-      { id: 3, month: `${year}-03`, total_revenue: 45200000, total_payroll: 29000000, total_orders: 720, note: null },
-      { id: 4, month: `${year}-04`, total_revenue: 43800000, total_payroll: 27800000, total_orders: 680, note: null },
-      { id: 5, month: `${year}-05`, total_revenue: 47600000, total_payroll: 30200000, total_orders: 750, note: null },
-      { id: 6, month: `${year}-06`, total_revenue: 51200000, total_payroll: 32000000, total_orders: 790, note: null },
-      { id: 7, month: `${year}-07`, total_revenue: 54800000, total_payroll: 33900000, total_orders: 810, note: null },
-      { id: 8, month: `${year}-08`, total_revenue: 56300000, total_payroll: 34700000, total_orders: 835, note: null },
-      { id: 9, month: `${year}-09`, total_revenue: 52900000, total_payroll: 32800000, total_orders: 770, note: null },
-      { id: 10, month: `${year}-10`, total_revenue: 49500000, total_payroll: 31200000, total_orders: 720, note: null },
-      { id: 11, month: `${year}-11`, total_revenue: 47200000, total_payroll: 30100000, total_orders: 690, note: null },
-      { id: 12, month: `${year}-12`, total_revenue: 58900000, total_payroll: 35900000, total_orders: 820, note: null },
-    ];
-    return calculateDerivedFields(mock);
-  }
+type MonthlyFinanceData = {
+  id?: string | number;
+  month: string;
+  total_revenue: string | number;
+  total_payroll: string | number;
+  total_orders?: number;
+  [key: string]: any;
 };
 
-const calculateDerivedFields = (data: MonthlyFinanceSummaryType[]): MonthlyFinanceSummaryType[] => {
+const calculateDerivedFields = (
+  data: MonthlyFinanceData[]
+): (MonthlyFinanceData & { profit: number; growthRate: number })[] => {
   return data.map((d, i, arr) => {
-    const profit = d.total_revenue - d.total_payroll;
+    const profit =
+      parseFloat(d.total_revenue as string) -
+      parseFloat(d.total_payroll as string);
     const prev = arr[i - 1];
-    const growthRate = prev ? ((d.total_revenue - prev.total_revenue) / prev.total_revenue) * 100 : 0;
+    const growthRate = prev
+      ? ((parseFloat(d.total_revenue as string) -
+          parseFloat(prev.total_revenue as string)) /
+          parseFloat(prev.total_revenue as string)) *
+        100
+      : 0;
     return { ...d, profit, growthRate };
   });
 };
 
-//---------------------------------------------
-// 3. Component chính
-//---------------------------------------------
 const MonthlyFinanceSummaryPage = () => {
-  const [data, setData] = useState<MonthlyFinanceSummaryType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [year] = useState<number>(new Date().getFullYear());
+  const [data, setData] = useState<
+    (MonthlyFinanceData & { profit: number; growthRate: number })[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const year = new Date().getFullYear();
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const res = await monthlyFinanceApi.getAll();
+      const filtered = res.data.filter((d: MonthlyFinanceData) =>
+        d.month.startsWith(`${year}`)
+      );
+      const sorted = [...filtered].sort((a, b) =>
+        b.month.localeCompare(a.month)
+      );
+      const withDerived = calculateDerivedFields(sorted);
+      setData(withDerived);
+    } catch (err) {
+      message.error('Không thể tải dữ liệu thống kê');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const res = await fetchMonthlyFinanceSummary(year);
-      setData(res);
-      setLoading(false);
-    };
     load();
   }, [year]);
 
-  const formatCurrency = (value: number | string | undefined) => {
-    if (typeof value === 'number') {
-      return `${value.toLocaleString('vi-VN')} ₫`;
-    }
-    if (typeof value === 'string' && !isNaN(Number(value))) {
-      return `${Number(value).toLocaleString('vi-VN')} ₫`;
-    }
-    return value;
+  const formatCurrency = (value: string | number) => {
+    const n = Number(value);
+    return isNaN(n) ? value : `${n.toLocaleString('vi-VN')} ₫`;
   };
+
   const formatPercent = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 
-  const totalRevenue = data.reduce((s, v) => s + v.total_revenue, 0);
-  const totalPayroll = data.reduce((s, v) => s + v.total_payroll, 0);
+  const totalRevenue = data.reduce(
+    (s, v) => s + parseFloat(String(v.total_revenue)),
+    0
+  );
+  const totalPayroll = data.reduce(
+    (s, v) => s + parseFloat(String(v.total_payroll)),
+    0
+  );
   const totalProfit = data.reduce((s, v) => s + (v.profit || 0), 0);
   const avgMonthlyRevenue = totalRevenue / (data.length || 1);
 
@@ -127,20 +112,22 @@ const MonthlyFinanceSummaryPage = () => {
       title: 'Doanh thu',
       dataIndex: 'total_revenue',
       key: 'revenue',
-      render: (v: number) => formatCurrency(v),
+      render: formatCurrency,
     },
     {
       title: 'Chi lương',
       dataIndex: 'total_payroll',
       key: 'payroll',
-      render: (v: number) => formatCurrency(v),
+      render: formatCurrency,
     },
     {
       title: 'Lợi nhuận',
       dataIndex: 'profit',
       key: 'profit',
       render: (v: number) => (
-        <span style={{ color: v >= 0 ? 'green' : 'red', fontWeight: 500 }}>{formatCurrency(v)}</span>
+        <span style={{ color: v >= 0 ? 'green' : 'red', fontWeight: 500 }}>
+          {formatCurrency(v)}
+        </span>
       ),
     },
     {
@@ -148,16 +135,22 @@ const MonthlyFinanceSummaryPage = () => {
       dataIndex: 'growthRate',
       key: 'growth',
       render: (v: number) => (
-        <span style={{ color: v >= 0 ? 'green' : 'red' }}>{formatPercent(v)}</span>
+        <span style={{ color: v >= 0 ? 'green' : 'red' }}>
+          {formatPercent(v)}
+        </span>
       ),
     },
-    { title: 'Số đơn', dataIndex: 'total_orders', key: 'orders' },
+    {
+      title: 'Số đơn',
+      dataIndex: 'total_orders',
+      key: 'orders',
+    },
   ];
 
   const chartData = data.map((d) => ({
-    month: d.month.slice(5),
-    Revenue: d.total_revenue,
-    Payroll: d.total_payroll,
+    month: d.month.slice(5), // chỉ lấy MM
+    Revenue: parseFloat(String(d.total_revenue)),
+    Payroll: parseFloat(String(d.total_payroll)),
     Profit: d.profit,
   }));
 
@@ -165,40 +158,67 @@ const MonthlyFinanceSummaryPage = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-semibold">Tổng quan tài chính theo tháng</h1>
+      <h1 className="text-xl font-semibold">📊 Tổng quan tài chính theo tháng</h1>
       <p className="text-gray-500">Năm {year}</p>
 
       <Row gutter={16} className="mt-6">
         <Col span={6}>
           <Card>
-            <Statistic title="Tổng doanh thu" value={totalRevenue} prefix={<DollarOutlined />} valueStyle={{ fontWeight: 600 }} formatter={formatCurrency} />
-            <div className="text-xs text-gray-400">Năm {year}</div>
+            <Statistic
+              title="Tổng doanh thu"
+              value={totalRevenue}
+              prefix={<DollarOutlined />}
+              valueStyle={{ fontWeight: 600 }}
+              formatter={formatCurrency}
+            />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="Tổng chi lương" value={totalPayroll} prefix={<FallOutlined />} valueStyle={{ fontWeight: 600 }} formatter={formatCurrency} />
-            <div className="text-xs text-gray-400">Năm {year}</div>
+            <Statistic
+              title="Tổng chi lương"
+              value={totalPayroll}
+              prefix={<FallOutlined />}
+              valueStyle={{ fontWeight: 600 }}
+              formatter={formatCurrency}
+            />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="Tổng lợi nhuận" value={totalProfit} prefix={<RiseOutlined />} valueStyle={{ color: 'green', fontWeight: 600 }} formatter={formatCurrency} />
-            <div className="text-xs text-gray-400">Năm {year}</div>
+            <Statistic
+              title="Tổng lợi nhuận"
+              value={totalProfit}
+              prefix={<RiseOutlined />}
+              valueStyle={{ color: 'green', fontWeight: 600 }}
+              formatter={formatCurrency}
+            />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="Doanh thu TB tháng" value={avgMonthlyRevenue} prefix={<BarChartOutlined />} valueStyle={{ fontWeight: 600 }} formatter={formatCurrency} />
-            <div className="text-xs text-gray-400">Năm {year}</div>
+            <Statistic
+              title="Doanh thu TB tháng"
+              value={avgMonthlyRevenue}
+              prefix={<BarChartOutlined />}
+              valueStyle={{ fontWeight: 600 }}
+              formatter={formatCurrency}
+            />
           </Card>
         </Col>
       </Row>
 
       <Card
-        title="Biểu đồ doanh thu - lương - lợi nhuận"
+        title="Biểu đồ doanh thu - chi lương - lợi nhuận"
         className="mt-6"
-        extra={<Button icon={<DownloadOutlined />}>Download CSV</Button>}
+        extra={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button type="primary" onClick={() => setIsAddModalOpen(true)}>
+              + Thêm tháng
+            </Button>
+            <ExportCSVButton data={data} year={year} />
+          </div>
+        }
       >
         <Tabs
           defaultActiveKey="chart"
@@ -212,7 +232,14 @@ const MonthlyFinanceSummaryPage = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                    <Tooltip
+                      formatter={(value) => {
+                        if (Array.isArray(value)) {
+                          return value.map((v) => formatCurrency(v)).join(', ');
+                        }
+                        return formatCurrency(value);
+                      }}
+                    />
                     <Legend />
                     <Bar dataKey="Revenue" name="Doanh thu" fill="#8b5cf6" />
                     <Bar dataKey="Payroll" name="Chi lương" fill="#f97316" />
@@ -225,12 +252,27 @@ const MonthlyFinanceSummaryPage = () => {
               key: 'table',
               label: 'Bảng chi tiết',
               children: (
-                <Table dataSource={data} columns={columns} rowKey="id" pagination={false} />
+                <Table
+                  dataSource={data}
+                  columns={columns}
+                  rowKey="id"
+                  pagination={false}
+                />
               ),
             },
           ]}
         />
       </Card>
+
+      {/* Modal tạo tháng */}
+      <AddMonthlySummaryModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          load();
+        }}
+      />
     </div>
   );
 };
