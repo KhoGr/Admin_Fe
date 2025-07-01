@@ -48,14 +48,24 @@ const StaffTable: React.FC<StaffTableProps> = ({ staffList = [], onDetail, onRel
       dataIndex: 'position',
       render: (text: string) => text || '—',
     },
-    {
-      title: 'Lương',
-      dataIndex: 'salary',
-      render: (salary: number) =>
-        salary
-          ? salary.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
-          : '—',
-    },
+{
+  title: 'Lương',
+  dataIndex: 'salary',
+  render: (salary: number, record: StaffModel) => {
+    if (!salary || salary <= 0) return '—';
+
+    const formatted = new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number(salary));
+
+    const unit = record.working_type === 'parttime' ? '/giờ' : '/ngày';
+    return `${formatted}${unit}`;
+  },
+},
+
     {
       title: 'Loại làm việc',
       dataIndex: 'working_type',
@@ -115,9 +125,9 @@ const StaffTable: React.FC<StaffTableProps> = ({ staffList = [], onDetail, onRel
         rowKey="staff_id"
         pagination={false}
         style={{ marginTop: 16 }}
+          scroll={{ x: 'max-content' }}
       />
 
-      {/* Custom Pagination */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
         <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
           Trang trước

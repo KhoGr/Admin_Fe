@@ -32,7 +32,7 @@ const shiftOptions: { label: string; value: ShiftType }[] = [
 
 const shiftTimeDefaults: Record<ShiftType, { start: string; end: string }> = {
   morning: { start: "08:00:00", end: "12:00:00" },
-  afternoon: { start: "13:00:00", end: "18:00:00" },
+  afternoon: { start: "13:00:00", end: "17:00:00" },
   evening: { start: "18:00:00", end: "21:00:00" },
   full_day: { start: "08:00:00", end: "21:00:00" },
 };

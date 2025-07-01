@@ -1,4 +1,3 @@
-// components/order/OrderTable.tsx
 import { Table, Button, Badge, Space, Popconfirm } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { ColumnsType } from 'antd/es/table';
@@ -41,7 +40,8 @@ const OrderTable: React.FC<OrderTableProps> = ({ orders, onEdit, onDelete, searc
     {
       title: 'Final',
       key: 'final_amount',
-      render: (_, order) => `$${Number(order.final_amount || 0).toFixed(2)}`,
+render: (_, order) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.final_amount) || 0),
     },
     {
       title: 'Items',

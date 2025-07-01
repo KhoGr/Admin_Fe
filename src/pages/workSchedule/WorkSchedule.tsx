@@ -7,7 +7,7 @@ import ScheduleStats from "../../components/workschedule/ScheduleStats";
 import EmployeeSelector from "../../components/workschedule/EmployeeSelector";
 import ScheduleTable from "../../components/workschedule/ScheduleTable";
 import ScheduleDetailModal from "../../components/workschedule/ScheduleDetailModal";
-import EmployeeCalendar from "../../components/workschedule/EmployeeCalendar";
+import AddMonthlyShiftModal from "../../components/workschedule/AddMonthlyShiftModal";
 
 import { WorkShift, CreateWorkShiftDto } from "../../types/workship";
 import { StaffModel } from "../../types/staff";
@@ -21,20 +21,25 @@ export default function WorkSchedulePage() {
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(dayjs());
   const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
   const [staffList, setStaffList] = useState<StaffModel[]>([]);
-  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null); // 👈 thêm state ngày lọc
+  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(1);
+  const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
 
   const [editingShift, setEditingShift] = useState<WorkShift | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [monthlyModalVisible, setMonthlyModalVisible] = useState(false);
 
   const fetchData = async () => {
     try {
+      const params: any = {
+        ...(selectedDate
+          ? { date: selectedDate.format("YYYY-MM-DD") }
+          : { month: selectedMonth.format("YYYY-MM") }),
+        ...(selectedStaffId !== null ? { staffId: selectedStaffId } : {}),
+      };
+
       const [staffs, shifts] = await Promise.all([
         staffApi.getAll(),
-        workShiftApi.getAll({
-          month: selectedMonth.format("YYYY-MM"),
-          staffId: selectedStaffId ?? undefined,
-        }),
+        workShiftApi.getAll(params),
       ]);
       setStaffList(staffs);
       setWorkShifts(shifts);
@@ -44,8 +49,16 @@ export default function WorkSchedulePage() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (!selectedDate) {
+      fetchData(); // chỉ gọi khi chưa chọn ngày
+    }
   }, [selectedMonth, selectedStaffId]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchData(); // gọi khi có selectedDate
+    }
+  }, [selectedDate, selectedStaffId]);
 
   const handleCreate = async (data: CreateWorkShiftDto) => {
     return await workShiftApi.create(data);
@@ -67,9 +80,14 @@ export default function WorkSchedulePage() {
   };
 
   const filteredShifts = useMemo(() => {
-    if (!selectedDate) return workShifts;
-    const dateStr = selectedDate.format("YYYY-MM-DD");
-    return workShifts.filter((shift) => shift.date === dateStr);
+    let result = workShifts;
+
+    if (selectedDate) {
+      const dateStr = selectedDate.format("YYYY-MM-DD");
+      result = result.filter((shift) => shift.date === dateStr);
+    }
+
+    return result;
   }, [workShifts, selectedDate]);
 
   return (
@@ -82,8 +100,14 @@ export default function WorkSchedulePage() {
           <DatePicker
             picker="month"
             value={selectedMonth}
-            onChange={(date) => date && setSelectedMonth(date)}
+            onChange={(date) => {
+              setSelectedMonth(date ?? dayjs());
+              setSelectedDate(null); // reset ngày nếu đổi tháng
+            }}
           />
+          <Button type="default" onClick={() => setMonthlyModalVisible(true)}>
+            Add by Month
+          </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -105,21 +129,21 @@ export default function WorkSchedulePage() {
             label: "Work Shifts",
             children: (
               <>
-                <ScheduleStats shifts={workShifts} />
+                <ScheduleStats shifts={filteredShifts} />
 
                 <EmployeeSelector
                   employees={staffList}
-                  selectedIds={selectedStaffId ? [selectedStaffId] : []}
+                  selectedIds={selectedStaffId !== null ? [selectedStaffId] : []}
                   onChange={(ids) => {
-                    setSelectedStaffId(ids[0] ?? null);
+                    setSelectedStaffId(ids.length > 0 ? ids[0] : null);
                   }}
-                  onDateChange={setSelectedDate} 
+                  onDateChange={setSelectedDate}
                   mode="single"
                   workshifts={workShifts}
                 />
 
                 <ScheduleTable
-                  shifts={filteredShifts} 
+                  shifts={filteredShifts}
                   onView={(shift) => {
                     setEditingShift(shift);
                     setModalVisible(true);
@@ -129,21 +153,6 @@ export default function WorkSchedulePage() {
               </>
             ),
           },
-          // {
-          //   key: "2",
-          //   label: "Calendar View",
-          //   children: (
-          //     <EmployeeCalendar
-          //       currentDate={selectedMonth.toDate()}
-          //       employees={staffList}
-          //       workShifts={workShifts}
-          //       onClickCell={(shift, employee, date) => {
-          //         setEditingShift(shift ?? null);
-          //         setModalVisible(true);
-          //       }}
-          //     />
-          //   ),
-          // },
         ]}
       />
 
@@ -156,6 +165,12 @@ export default function WorkSchedulePage() {
         onSubmit={editingShift ? handleUpdate : handleCreate}
         shiftData={editingShift}
         employees={staffList}
+      />
+
+      <AddMonthlyShiftModal
+        open={monthlyModalVisible}
+        onClose={() => setMonthlyModalVisible(false)}
+        onSuccess={fetchData}
       />
     </div>
   );

@@ -113,6 +113,7 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
     <Spin spinning={loading}>
       <Table
         dataSource={data}
+        scroll={{ x: 'max-content' }}
         rowKey="attendance_id"
         columns={columns}
         pagination={{ pageSize: 10 }}

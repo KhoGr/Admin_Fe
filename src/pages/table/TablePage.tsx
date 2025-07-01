@@ -5,7 +5,7 @@ import { Table as TableModel, CreateTableDto, UpdateTableDto } from '../../types
 import TableForm, { TableFormData } from '../../components/table/TableForm';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:4000'); // ⚠️ server URL
+const socket = io('https://api.vnpt-hn.io.vn'); 
 
 const TablePage: React.FC = () => {
   const [tables, setTables] = useState<TableModel[]>([]);

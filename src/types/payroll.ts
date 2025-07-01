@@ -2,6 +2,7 @@ import { StaffModel } from './staff';
 
 export type PayrollStatus = 'pending' | 'paid';
 
+
 export interface Payroll {
   payroll_id: number;
   staff_id: number;
@@ -25,6 +26,12 @@ export interface PayrollCreatePayload {
   note?: string;
   status?:string;
 }
+export interface GeneratePayrollPayload {
+  period_start: string;
+  period_end: string;
+  staff_ids?: number[];
+}
+
 
 export interface PayrollStatusUpdatePayload {
   status: PayrollStatus;

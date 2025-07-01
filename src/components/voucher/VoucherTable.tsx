@@ -105,6 +105,8 @@ const VoucherTable: React.FC<VoucherTableProps> = ({ data, reload }) => {
       rowKey="voucher_id"
       pagination={{ pageSize: 10 }}
       bordered
+      scroll={{ x: 'max-content' }}
+
     />
   );
 };

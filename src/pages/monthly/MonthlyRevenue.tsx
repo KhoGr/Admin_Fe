@@ -35,6 +35,7 @@ type MonthlyFinanceData = {
   month: string;
   total_revenue: string | number;
   total_payroll: string | number;
+  total_material_cost: string | number;
   total_orders?: number;
   [key: string]: any;
 };
@@ -73,7 +74,7 @@ const MonthlyFinanceSummaryPage = () => {
         d.month.startsWith(`${year}`)
       );
       const sorted = [...filtered].sort((a, b) =>
-        b.month.localeCompare(a.month)
+        a.month.localeCompare(b.month)
       );
       const withDerived = calculateDerivedFields(sorted);
       setData(withDerived);
@@ -145,13 +146,21 @@ const MonthlyFinanceSummaryPage = () => {
       dataIndex: 'total_orders',
       key: 'orders',
     },
+    {
+  title: 'Chi phí nguyên liệu',
+  dataIndex: 'total_material_cost',
+  key: 'material_cost',
+  render: formatCurrency,
+},
+
   ];
 
   const chartData = data.map((d) => ({
-    month: d.month.slice(5), // chỉ lấy MM
+    month: d.month.slice(5), //chỉ lấy tháng thui
     Revenue: parseFloat(String(d.total_revenue)),
     Payroll: parseFloat(String(d.total_payroll)),
     Profit: d.profit,
+    MaterialCost: parseFloat(String(d.total_material_cost)),
   }));
 
   if (loading) return <Skeleton active style={{ padding: 24 }} />;
@@ -244,6 +253,7 @@ const MonthlyFinanceSummaryPage = () => {
                     <Bar dataKey="Revenue" name="Doanh thu" fill="#8b5cf6" />
                     <Bar dataKey="Payroll" name="Chi lương" fill="#f97316" />
                     <Bar dataKey="Profit" name="Lợi nhuận" fill="#10b981" />
+                    <Bar dataKey="MaterialCost" name="Chi phí nguyên liệu" fill="#facc15" />
                   </BarChart>
                 </ResponsiveContainer>
               ),

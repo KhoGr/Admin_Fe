@@ -6,7 +6,7 @@ import monthlyFinanceApi from '../../api/monthlyFinanceApi';
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void; // callback để refetch lại data sau khi tạo xong
+  onSuccess: () => void; 
 }
 
 const AddMonthlySummaryModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {

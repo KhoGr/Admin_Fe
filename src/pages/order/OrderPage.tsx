@@ -19,7 +19,7 @@ import OrderTable from '../../components/order/OrderTable';
 import { OrderModel } from '../../types/order';
 import orderApi from '../../api/orderApi';
 
-const socket = io('http://localhost:4000'); // kết nối socket tại đây luôn
+const socket = io('https://api.vnpt-hn.io.vn'); // kết nối socket tại đây luôn
 
 const Orders = () => {
   const [isOpen, setIsOpen] = useState(false);

@@ -19,12 +19,12 @@ const ScheduleTable: React.FC<Props> = ({ shifts, onView, onDelete }) => {
       key: "staff",
       render: (staff) => staff?.user?.name || "N/A",
     },
-    {
-      title: "Ngày làm",
-      dataIndex: "work_date",
-      key: "work_date",
-      render: (date) => dayjs(date).format("DD/MM/YYYY"),
-    },
+{
+  title: "Ngày làm",
+  dataIndex: "date",
+  key: "date",
+  render: (date) => dayjs(date).format("DD/MM/YYYY"),
+},
     {
       title: "Giờ làm",
       key: "hours",
@@ -107,6 +107,8 @@ const ScheduleTable: React.FC<Props> = ({ shifts, onView, onDelete }) => {
       dataSource={shifts}
       rowKey="work_shift_id"
       pagination={{ pageSize: 10 }}
+      scroll={{ x: 'max-content' }}
+
     />
   );
 };

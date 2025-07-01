@@ -5,7 +5,6 @@ import {
   UpdateWorkShiftDto,
 } from "../types/workship";
 
-// Phải đúng với prefix router ở backend: /api/workshifts
 const URL = "/workshift";
 
 const workShiftApi = {
@@ -27,7 +26,7 @@ const workShiftApi = {
       .then((res) => res.data);
   },
 
-  // Lấy ca làm theo staff_id (optionally filter by date)
+  // Lấy ca làm theo staff_id 
   getByStaffId(staff_id: number, date?: string) {
     return axiosClient
       .get<WorkShift[]>(`${URL}/${staff_id}`, {
@@ -49,6 +48,14 @@ const workShiftApi = {
       .delete<{ message: string }>(`${URL}/${shift_id}`)
       .then((res) => res.data);
   },
+  generateMonthly(data: { staff_id: number; month: string }) {
+  return axiosClient
+    .post<{ message: string; created: number; skipped: number }>(
+      `${URL}/generate-monthly`,
+      data
+    )
+    .then((res) => res.data);
+},
 };
 
 export default workShiftApi;

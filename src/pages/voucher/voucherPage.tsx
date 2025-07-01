@@ -188,13 +188,13 @@ const VoucherPage: React.FC = () => {
             }}
           </Form.Item>
 
-          <Form.Item name="usage_limit" label="Giới hạn lượt dùng">
+          {/* <Form.Item name="usage_limit" label="Giới hạn lượt dùng">
             <Input type="number" min={1} placeholder="Không giới hạn nếu bỏ trống" />
           </Form.Item>
 
           <Form.Item name="usage_limit_per_user" label="Giới hạn mỗi người">
             <Input type="number" min={1} placeholder="Không giới hạn nếu bỏ trống" />
-          </Form.Item>
+          </Form.Item> */}
 
           <Form.Item name="expires_at" label="Hạn sử dụng">
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />

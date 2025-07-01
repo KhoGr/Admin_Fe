@@ -30,6 +30,7 @@ const VoucherPage=Loadable(lazy(()=>import("../pages/voucher/voucherPage")))
 const AttendancePage=Loadable(lazy(()=>import("../pages/attendance/AttendancePage")))
 const PayrollPage=Loadable(lazy(()=>import("../pages/payroll/PayrollPage")))
 const AdminQrCode=Loadable(lazy(()=>import("../pages/qr/AdminQrCode")))
+const InventoryBatchPage=Loadable(lazy(()=>import("../pages/inventory/inventoryPage")))
 
 
 
@@ -50,7 +51,7 @@ const Router = createBrowserRouter([
       {path:"/admin/order",element:<OrderPage/>},
       {path:"/admin/comment",element:<CommentsPage/>},
       {path:"/admin/monthly-revenue",element:<MonthlyRevenue/>},
-      {path:"/admin/inventory",element:<Inventory/>},
+      {path:"/admin/inventory",element:<InventoryBatchPage/>},
       {path:"/admin/settings",element:<SettingsPage/>},
       {path:"/admin/work-schedule",element:<WorkSchedulePage/>},
       {path:"/admin/chatbot",element:<ChatbotPage/>},

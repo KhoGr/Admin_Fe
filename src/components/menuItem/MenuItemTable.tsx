@@ -114,6 +114,7 @@ const MenuItemTable: React.FC<MenuItemTableProps> = ({ menuItems, onDetail, cate
           dataSource={menuItems}
           columns={columns}
           rowKey="item_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: currentPage,
             pageSize,
@@ -124,6 +125,7 @@ const MenuItemTable: React.FC<MenuItemTableProps> = ({ menuItems, onDetail, cate
             },
             showSizeChanger: true,
             showTotal: (total) => `Tổng cộng ${total} món ăn`,
+            
           }}
         />
       )}

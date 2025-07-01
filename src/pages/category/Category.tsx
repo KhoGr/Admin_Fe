@@ -70,25 +70,28 @@ const CategoryPage: React.FC = () => {
 
 <div style={{ 
   display: 'flex', 
+    flexWrap: 'wrap',
   justifyContent: 'space-between', 
-  alignItems: 'center', // Thêm dòng này để căn giữa theo chiều dọc
+  alignItems: 'center',
   marginBottom: 24,
-  gap: 8 // Tạo khoảng cách giữa các phần tử
+  gap: 8 
 }}>
-  <Space direction="horizontal" align="center"> {/* Thêm align="center" */}
-    <Input
-      placeholder="Tìm kiếm danh mục..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      style={{ 
-        width: 500, // Thay minWidth bằng width cố định
-        height: 32 // Thêm chiều cao cố định
-      }}
-    />
+  <Space direction="horizontal" align="center"> 
+<Input
+  placeholder="Tìm kiếm danh mục..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  style={{ 
+    width: '100%',
+    maxWidth: 500,  
+    height: 32 
+  }}
+/>
+
     <Button 
       type="default" 
       onClick={onSearch}
-      style={{ height: 32 }} // Đồng bộ chiều cao với Input
+      style={{ height: 32 }} 
     >
       Tìm kiếm
     </Button>
@@ -97,7 +100,7 @@ const CategoryPage: React.FC = () => {
   <Button 
     type="primary" 
     onClick={() => setOpen(true)}
-    style={{ height: 32 }} // Đồng bộ chiều cao
+    style={{ height: 32 }} 
   >
     + Thêm danh mục
   </Button>

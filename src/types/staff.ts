@@ -1,4 +1,4 @@
-export type WorkingType = 'full_time' | 'part_time' ;
+export type WorkingType = 'fulltime' | 'parttime' ;
 
 export interface StaffModel {
   staff_id: number;

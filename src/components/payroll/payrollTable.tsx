@@ -170,6 +170,8 @@ const PayrollTable: React.FC<PayrollTableProps> = ({ data, loading, onReload }) 
       </div>
 
       <Table
+                scroll={{ x: 'max-content' }}
+
         columns={columns}
         dataSource={filteredData}
         rowKey="payroll_id"

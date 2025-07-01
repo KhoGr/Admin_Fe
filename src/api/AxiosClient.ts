@@ -1,15 +1,15 @@
-
 import axios from "axios";
 
+// Đọc baseURL từ biến môi trường
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 
 const axiosClient = axios.create({
-  baseURL: "https://api.vnpt-hn.io.vn/api",
+  baseURL, // ← dùng biến thay vì hardcode
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// ✅ Interceptor thêm token vào request
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -21,15 +21,14 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Interceptor xử lý lỗi response
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("API Error", error);
 
     if (error.response?.status === 401) {
-      localStorage.removeItem("token"); 
-      window.location.href = "/account/login"; 
+      localStorage.removeItem("token");
+      window.location.href = "/account/login";
     }
 
     return Promise.reject(error);

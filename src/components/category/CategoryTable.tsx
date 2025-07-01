@@ -75,6 +75,8 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onDetail }) =
       }}
       bordered
       pagination={{ position: ['bottomCenter'] }}
+            scroll={{ x: 'max-content' }}
+
     />
   );
 };

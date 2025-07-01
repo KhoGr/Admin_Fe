@@ -9,14 +9,15 @@ import {
   Select,
   InputNumber,
   DatePicker,
+  message,
 } from 'antd';
 import StaffTable from '../../components/staff/staffTable';
+import AddStaffModal from '../../components/staff/AddStaffModal';
 import { StaffModel } from '../../types/staff';
 import staffApi from '../../api/staffApi';
 import { useDispatch } from 'react-redux';
 import { setMessage } from '../../redux/slices/message.slice';
 import dayjs from 'dayjs';
-
 const { Option } = Select;
 
 const StaffPage: React.FC = () => {
@@ -63,23 +64,25 @@ const StaffPage: React.FC = () => {
       username: staff.user?.username || '',
       email: staff.user?.account?.email || '',
       position: staff.position,
-      salary: staff.salary,
+      salary: Number(staff.salary),
       working_type: staff.working_type,
       joined_date: staff.joined_date ? dayjs(staff.joined_date) : null,
       note: staff.note || '',
     });
     setOpenDetail(true);
   };
+
   const handleAdd = async () => {
     try {
       const values = await addForm.validateFields();
       await staffApi.create(values);
-      dispatch(setMessage({ message: 'Thêm nhân viên thành công!', type: 'success' }));
+      message.success('Thêm nhân viên thành công');
       setOpenAdd(false);
       addForm.resetFields();
       fetchAllStaffs();
-    } catch (error) {
-      dispatch(setMessage({ message: 'Lỗi khi thêm nhân viên', type: 'error' }));
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.error || 'Lỗi khi thêm nhân viên';
+      message.error(errorMsg);
     }
   };
 
@@ -97,11 +100,12 @@ const StaffPage: React.FC = () => {
       };
 
       await staffApi.update(selectedStaff.user.user_id, payload);
-      dispatch(setMessage({ message: 'Cập nhật nhân viên thành công!', type: 'success' }));
+      message.success('Cập nhật nhân viên thành công');
       setOpenDetail(false);
       fetchAllStaffs();
-    } catch (error) {
-      dispatch(setMessage({ message: 'Lỗi khi cập nhật nhân viên', type: 'error' }));
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.error || 'Lỗi khi cập nhật nhân viên';
+      message.error(errorMsg);
     }
   };
 
@@ -153,14 +157,30 @@ const StaffPage: React.FC = () => {
           <Form.Item label="Chức vụ" name="position">
             <Input />
           </Form.Item>
-          <Form.Item label="Lương" name="salary">
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              addonAfter="₫"
-              formatter={(value) => `${Number(value).toLocaleString('vi-VN')}`}
+          <Form.Item
+            label="Lương"
+            name="salary"
+            rules={[{ required: true, message: 'Vui lòng nhập lương' }]}
+          >
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="Nhập lương"
+              onChange={(e) => {
+                const raw = e.target.value;
+                const cleaned = raw.replace(/[^\d]/g, ''); // chỉ giữ số
+                form.setFieldValue('salary', Number(cleaned));
+              }}
+              onBlur={() => {
+                const value = form.getFieldValue('salary');
+                if (typeof value === 'number') {
+                  form.setFieldValue('salary', value); // ép lại lần nữa nếu cần
+                }
+              }}
+              value={form.getFieldValue('salary')?.toLocaleString() || ''}
             />
           </Form.Item>
+
           <Form.Item label="Hình thức làm việc" name="working_type">
             <Select>
               <Option value="full_time">Full-time</Option>
@@ -176,49 +196,13 @@ const StaffPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-         <Modal
+
+      <AddStaffModal
         open={openAdd}
-        title="Thêm nhân viên mới"
         onCancel={() => setOpenAdd(false)}
-        okText="Thêm"
-        onOk={handleAdd}
-      >
-        <Form layout="vertical" form={addForm}>
-          <Form.Item label="Họ tên" name="name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item label="Chức vụ" name="position">
-            <Input />
-          </Form.Item>
-          <Form.Item label="Lương" name="salary">
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              addonAfter="₫"
-              formatter={(value) => value ? `${Number(value).toLocaleString('vi-VN')}` : ''}
-            />
-          </Form.Item>
-          <Form.Item label="Hình thức làm việc" name="working_type">
-            <Select>
-              <Option value="full_time">Full-time</Option>
-              <Option value="part_time">Part-time</Option>
-              <Option value="intern">Thực tập</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item label="Ngày vào làm" name="joined_date">
-            <Input type="date" />
-          </Form.Item>
-          <Form.Item label="Ghi chú" name="note">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onSubmit={handleAdd}
+        form={addForm}
+      />
     </div>
   );
 };
